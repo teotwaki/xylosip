@@ -2,8 +2,10 @@
 
 use nom::{
     IResult,
-    combinator::{ map_res, opt },
-    sequence::pair,
+    combinator::{ map_res, opt, recognize },
+    sequence::{ pair, tuple },
+    branch::alt,
+    multi::many0,
     bytes::complete::{
         tag,
         is_a,
@@ -109,23 +111,27 @@ pub fn newline(input: &[u8]) -> IResult<&[u8], &[u8]> {
     tag(b"\r\n")(input)
 }
 
-pub fn linear_whitespace(input: &[u8]) -> IResult<&[u8], char> {
-    let (s, _) = opt(pair(whitespace, newline))(input)?;
-    let (s, _) = whitespace1(s)?;
-
-    Ok((s, ' '))
+pub fn linear_whitespace(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            opt(pair(whitespace, newline)),
+            whitespace1
+        )
+    )(input)
 }
 
-pub fn separator_whitespace(input: &[u8]) -> IResult<&[u8], Option<char>> {
-    opt(linear_whitespace)(input)
+pub fn separator_whitespace(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(opt(linear_whitespace))(input)
 }
 
-pub fn header_colon(input: &[u8]) -> IResult<&[u8], char> {
-    let (s, _) = whitespace(input)?;
-    let (s, _) = nom::character::complete::char(':')(s)?;
-    let (s, _) = separator_whitespace(s)?;
-
-    Ok((s, ':'))
+pub fn header_colon(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+                whitespace,
+                nom::character::complete::char(':'),
+                separator_whitespace
+        ))
+    )(input)
 }
 
 const TOKEN_CHARS: &'static [u8] = b"-.!%*_+`'~`";
@@ -158,100 +164,306 @@ pub fn word(input: &[u8]) -> IResult<&[u8], &[u8]> {
     take_while1(is_word)(input)
 }
 
-pub fn asterisk(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char('*')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, '*'))
+pub fn asterisk(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            nom::character::complete::char('*'),
+            separator_whitespace,
+        ))
+    )(input)
 }
 
-pub fn star(input: &[u8]) -> IResult<&[u8], char> {
+pub fn star(input: &[u8]) -> IResult<&[u8], &[u8]> {
     asterisk(input)
 }
 
-pub fn slash(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char('/')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, '/'))
+pub fn slash(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            nom::character::complete::char('/'),
+            separator_whitespace,
+        ))
+    )(input)
 }
 
-pub fn equal(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char('=')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, '='))
+pub fn equal(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            nom::character::complete::char('='),
+            separator_whitespace,
+        ))
+    )(input)
 }
 
-pub fn left_parenthesis(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char('(')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, '('))
+pub fn left_parenthesis(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            nom::character::complete::char('('),
+            separator_whitespace,
+        ))
+    )(input)
 }
 
-pub fn right_parenthesis(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char(')')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, ')'))
+pub fn right_parenthesis(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            nom::character::complete::char(')'),
+            separator_whitespace,
+        ))
+    )(input)
 }
 
-pub fn right_angle_quote(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = nom::character::complete::char('>')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, '>'))
+pub fn right_angle_quote(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            nom::character::complete::char('>'),
+            separator_whitespace,
+        )
+    )(input)
 }
 
-pub fn left_angle_quote(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char('<')(input)?;
-
-    Ok((input, '<'))
+pub fn left_angle_quote(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            nom::character::complete::char('<'),
+            separator_whitespace,
+        )
+    )(input)
 }
 
-pub fn comma(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char(',')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, ','))
+pub fn comma(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            nom::character::complete::char(','),
+            separator_whitespace,
+        ))
+    )(input)
 }
 
-pub fn semicolon(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char(';')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, ';'))
+pub fn semicolon(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            nom::character::complete::char(';'),
+            separator_whitespace,
+        ))
+    )(input)
 }
 
-pub fn colon(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char(':')(input)?;
-    let (input, _) = separator_whitespace(input)?;
-
-    Ok((input, ':'))
+pub fn colon(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            nom::character::complete::char(':'),
+            separator_whitespace,
+        ))
+    )(input)
 }
 
-pub fn left_double_quote(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = separator_whitespace(input)?;
-    let (input, _) = nom::character::complete::char('"')(input)?;
-
-    Ok((input, '"'))
+pub fn double_quote(input: &[u8]) -> IResult<&[u8], char> {
+    nom::character::complete::char('"')(input)
 }
 
-pub fn right_double_quote(input: &[u8]) -> IResult<&[u8], char> {
-    let (input, _) = nom::character::complete::char('"')(input)?;
-    let (input, _) = separator_whitespace(input)?;
+pub fn left_double_quote(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            separator_whitespace,
+            double_quote,
+        )
+    )(input)
+}
 
-    Ok((input, '"'))
+pub fn right_double_quote(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            double_quote,
+            separator_whitespace,
+        )
+    )(input)
+}
+
+pub fn is_utf_cont(i: u8) -> bool {
+    i >= 0x80 && i <= 0xbf
+}
+
+pub fn is_utf_c0_df(i: u8) -> bool {
+    i >= 0xc0 && i <= 0xdf
+}
+
+pub fn utf8_nonascii_c0_df(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            take_while_m_n(1, 1, is_utf_c0_df),
+            take_while_m_n(1, 1, is_utf_cont)
+        )
+    )(input)
+}
+
+pub fn is_utf_e0_ef(i: u8) -> bool {
+    i >= 0xe0 && i <= 0xef
+}
+
+pub fn utf8_nonascii_e0_ef(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            take_while_m_n(1, 1, is_utf_e0_ef),
+            take_while_m_n(2, 2, is_utf_cont)
+        )
+    )(input)
+}
+
+pub fn is_utf_f0_f7(i: u8) -> bool {
+    i >= 0xf0 && i <= 0xf7
+}
+
+pub fn utf8_nonascii_f0_f7(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            take_while_m_n(1, 1, is_utf_f0_f7),
+            take_while_m_n(3, 3, is_utf_cont)
+        )
+    )(input)
+}
+
+pub fn is_utf_f8_fb(i: u8) -> bool {
+    i >= 0xf8 && i <= 0xfb
+}
+
+pub fn utf8_nonascii_f8_fb(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            take_while_m_n(1, 1, is_utf_f8_fb),
+            take_while_m_n(4, 4, is_utf_cont)
+        )
+    )(input)
+}
+
+pub fn is_utf_fc_fd(i: u8) -> bool {
+    i == 0xfc || i == 0xfd
+}
+
+pub fn utf8_nonascii_fc_fd(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            take_while_m_n(1, 1, is_utf_fc_fd),
+            take_while_m_n(5, 5, is_utf_cont)
+        )
+    )(input)
+}
+
+pub fn is_utf_ascii(i: u8) -> bool {
+    i >= 0x21 && i <= 0x7e
+}
+
+pub fn utf8_ascii1(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    take_while_m_n(1, 1, is_utf_ascii)(input)
+}
+
+pub fn utf8_nonascii1(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    alt(
+        (
+            utf8_nonascii_c0_df,
+            utf8_nonascii_e0_ef,
+            utf8_nonascii_f0_f7,
+            utf8_nonascii_f8_fb,
+            utf8_nonascii_fc_fd
+        )
+    )(input)
+}
+
+pub fn utf8_char1(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    alt(
+        (
+            utf8_ascii1,
+            utf8_nonascii1,
+        )
+    )(input)
+}
+
+pub fn utf8_trim(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            utf8_char1,
+            many0(pair(opt(linear_whitespace), utf8_char1))
+        )
+    )(input)
+}
+
+pub fn is_comment_char(i: u8) -> bool {
+    (i >= 0x21 && i <= 0x27) ||
+        (i >= 0x2a && i <= 0x5b) ||
+        (i >= 0x5d && i <= 0x7e)
+}
+
+pub fn comment_char1(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    take_while1(is_comment_char)(input)
+}
+
+pub fn comment_text(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    alt((comment_char1, utf8_nonascii1))(input)
+}
+
+pub fn comment(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+                left_parenthesis,
+                many0(alt((comment_text, comment, quoted_pair))),
+        ))
+    )(input)
+}
+
+pub fn is_quotable_character(i: u8) -> bool {
+    i <= 0x09 ||
+        (i >= 0x0b && i <= 0x0c) ||
+        (i >= 0x0e && i <= 0x7f)
+}
+
+pub fn quotable_character(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    take_while_m_n(1, 1, is_quotable_character)(input)
+}
+
+pub fn quoted_pair(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        pair(
+            nom::character::complete::char('\\'),
+            quotable_character,
+        )
+    )(input)
+}
+
+pub fn is_quoted_text_char(i: u8) -> bool {
+    i == 0x21
+        || (i >= 0x23 && i <= 0x5b)
+        || (i >= 0x5d && i <= 0x7e)
+}
+
+pub fn quoted_text_char(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    take_while_m_n(1, 1, is_quoted_text_char)(input)
+}
+
+pub fn quoted_text(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    alt((
+        linear_whitespace,
+        quoted_text_char,
+        utf8_nonascii1,
+    ))(input)
+}
+
+pub fn quoted_string(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    recognize(
+        tuple((
+            separator_whitespace,
+            double_quote,
+            many0(alt((quoted_text, quoted_pair))),
+            double_quote
+        ))
+    )(input)
 }
 
 #[cfg(test)]
@@ -373,33 +585,33 @@ mod tests {
 
     #[test]
     fn linear_whitespace_requires_at_least_whitespace() {
-        assert!(linear_whitespace(b"  f") == Ok((b"f", ' ')));
+        assert!(linear_whitespace(b"  f") == Ok((b"f", b"  ")));
         assert_eq!(linear_whitespace(b"x").is_err(), true);
     }
 
     #[test]
     fn linear_whitespace_eats_preceding_crlf() {
-        assert!(linear_whitespace(b"\r\n  f") == Ok((b"f", ' ')));
+        assert!(linear_whitespace(b"\r\n  f") == Ok((b"f", b"\r\n  ")));
     }
 
     #[test]
     fn linear_whitespace_eats_preceding_ws_and_crlf() {
-        assert!(linear_whitespace(b"\t\t  \t \t \t\r\n  \tf") == Ok((b"f", ' ')));
+        assert!(linear_whitespace(b"\t\t  \t \t \t\r\n  \tf") == Ok((b"f", b"\t\t  \t \t \t\r\n  \t")));
     }
 
     #[test]
     fn header_colon_expects_a_colon() {
-        assert!(header_colon(b":a") == Ok((b"a", ':')));
+        assert!(header_colon(b":a") == Ok((b"a", b":")));
     }
 
     #[test]
     fn header_colon_allows_preceding_ws() {
-        assert!(header_colon(b"  \t\t  :a") == Ok((b"a", ':')));
+        assert!(header_colon(b"  \t\t  :a") == Ok((b"a", b"  \t\t  :")));
     }
 
     #[test]
     fn header_colon_allows_ws_after() {
-        assert!(header_colon(b": a") == Ok((b"a", ':')));
-        assert!(header_colon(b":\t\t \r\n a") == Ok((b"a", ':')))
+        assert!(header_colon(b": a") == Ok((b"a", b": ")));
+        assert!(header_colon(b":\t\t \r\n a") == Ok((b"a", b":\t\t \r\n ")))
     }
 }
