@@ -1,9 +1,12 @@
-use crate::parser::{
-    Result,
-    rfc3261::{
-        headers,
-        tokens::newline,
-        common::message_body,
+use crate::{
+    message::{ Message, Response, },
+    parser::{
+        Result,
+        rfc3261::{
+            headers,
+            tokens::newline,
+            common::message_body,
+        },
     },
 };
 
@@ -13,15 +16,19 @@ use nom::{
     combinator::{ opt, recognize },
 };
 
-pub fn response(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+pub fn response(input: &[u8]) -> Result<&[u8], Message> {
+    let (input, response) = recognize(
         tuple((
             status::status_line,
             many0(headers::message_header),
             newline,
             opt(message_body),
         ))
-    )(input)
+    )(input)?;
+
+    Ok((input, Message::Response(Response {
+        content: response,
+    })))
 }
 
 mod status {

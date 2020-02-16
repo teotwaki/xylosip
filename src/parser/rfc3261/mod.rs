@@ -6,11 +6,14 @@ mod tokens;
 
 use nom::branch::alt;
 
-use super::Result;
+use crate::{
+    message::Message,
+    parser::Result,
+};
 
 pub use common::hostname;
 
-pub fn sip_message(input: &[u8]) -> Result<&[u8], &[u8]> {
+pub fn sip_message(input: &[u8]) -> Result<&[u8], Message> {
     alt((
         request::request,
         response::response,

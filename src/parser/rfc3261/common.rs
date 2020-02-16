@@ -1,9 +1,12 @@
-use crate::parser::{
-    Error,
-    ErrorKind,
-    Result,
-    rfc2806::telephone_subscriber,
-    rfc3261::tokens,
+use crate::{
+    message::{ Method, Version, },
+    parser::{
+        Error,
+        ErrorKind,
+        Result,
+        rfc2806::telephone_subscriber,
+        rfc3261::tokens,
+    },
 };
 
 use nom::{
@@ -310,27 +313,74 @@ fn headers(input: &[u8]) -> Result<&[u8], &[u8]> {
     )(input)
 }
 
-pub fn method(input: &[u8]) -> Result<&[u8], &[u8]> {
+fn invite(input: &[u8]) -> Result<&[u8], Method> {
+    let (input, _) = tag("INVITE")(input)?;
+
+    Ok((input, Method::Invite))
+}
+
+fn ack(input: &[u8]) -> Result<&[u8], Method> {
+    let (input, _) = tag("ACK")(input)?;
+
+    Ok((input, Method::Ack))
+}
+
+fn options(input: &[u8]) -> Result<&[u8], Method> {
+    let (input, _) = tag("OPTIONS")(input)?;
+
+    Ok((input, Method::Options))
+}
+
+fn bye(input: &[u8]) -> Result<&[u8], Method> {
+    let (input, _) = tag("BYE")(input)?;
+
+    Ok((input, Method::Bye))
+}
+
+fn cancel(input: &[u8]) -> Result<&[u8], Method> {
+    let (input, _) = tag("CANCEL")(input)?;
+
+    Ok((input, Method::Cancel))
+}
+
+fn register(input: &[u8]) -> Result<&[u8], Method> {
+    let (input, _) = tag("REGISTER")(input)?;
+
+    Ok((input, Method::Register))
+}
+
+fn extension_method(input: &[u8]) -> Result<&[u8], Method> {
+    let (input, method) = tokens::token(input)?;
+
+    Ok((input, Method::Extension(method)))
+}
+
+pub fn method(input: &[u8]) -> Result<&[u8], Method> {
     alt((
-        tag("INVITE"),
-        tag("ACK"),
-        tag("OPTIONS"),
-        tag("BYE"),
-        tag("CANCEL"),
-        tag("REGISTER"),
-        tokens::token,
+        invite,
+        ack,
+        options,
+        bye,
+        cancel,
+        register,
+        extension_method,
     ))(input)
 }
 
-pub fn sip_version(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            tag_no_case("SIP/"),
-            digit1,
-            tag("."),
-            digit1,
-        ))
-    )(input)
+pub fn sip_version(input: &[u8]) -> Result<&[u8], Version> {
+    let (input, (_, major, _, minor)) = tuple((
+        tag_no_case("SIP/"),
+        digit1,
+        tag("."),
+        digit1,
+    ))(input)?;
+
+    let version = match (major, minor) {
+        (b"2", b"0") => Version::Two,
+        (major, minor) => Version::Other(major, minor)
+    };
+
+    Ok((input, version))
 }
 
 fn query(input: &[u8]) -> Result<&[u8], &[u8]> {
