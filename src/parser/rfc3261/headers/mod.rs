@@ -9,21 +9,25 @@ mod contact;
 mod via;
 mod warning;
 
-use super::{
-    header_colon,
-    token,
-    utf8_char1,
-    is_utf8_cont,
-    linear_whitespace,
-    newline,
-    method,
-    comma,
-    utf8_trim,
-    equal,
-    generic_param,
-    slash,
-    semicolon,
-    comment,
+use crate::parser::rfc3261::{
+    tokens::{
+        header_colon,
+        token,
+        utf8_char1,
+        is_utf8_cont,
+        linear_whitespace,
+        newline,
+        comma,
+        utf8_trim,
+        equal,
+        slash,
+        semicolon,
+        comment,
+    },
+    common::{
+        method,
+        generic_param,
+    },
 };
 
 use nom::{

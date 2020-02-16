@@ -1,14 +1,20 @@
-use crate::parser::rfc3261::{
+use crate::parser::{
     Result,
-    header_colon,
-    comma,
-    absolute_uri,
-    equal,
-    word,
-    generic_param,
-    left_angle_quote,
-    right_angle_quote,
-    semicolon,
+    rfc3261::{
+        tokens::{
+            header_colon,
+            comma,
+            equal,
+            word,
+            left_angle_quote,
+            right_angle_quote,
+            semicolon,
+        },
+        common::{
+            absolute_uri,
+            generic_param,
+        },
+    },
 };
 
 use nom::{

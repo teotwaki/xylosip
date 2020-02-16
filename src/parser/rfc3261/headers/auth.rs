@@ -1,18 +1,25 @@
-use crate::parser::rfc3261::{
+use crate::parser::{
     Result,
-    token,
-    linear_whitespace,
-    header_colon,
-    comma,
-    absolute_uri,
-    quoted_string,
-    equal,
-    left_double_quote,
-    right_double_quote,
-    is_lowercase_hexadecimal,
-    abs_path,
-    authority,
-    is_space,
+    rfc3261::{
+        tokens::{
+            token,
+            linear_whitespace,
+            header_colon,
+            comma,
+            equal,
+            left_double_quote,
+            right_double_quote,
+            is_lowercase_hexadecimal,
+            is_space,
+            quoted_string,
+        },
+        common::{
+            absolute_uri,
+            abs_path,
+            authority,
+        },
+    },
+
 };
 
 use nom::{

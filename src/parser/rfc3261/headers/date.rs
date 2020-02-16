@@ -1,6 +1,6 @@
-use crate::parser::rfc3261::{
+use crate::parser::{
     Result,
-    header_colon,
+    rfc3261::tokens::header_colon,
 };
 
 use nom::{

@@ -11,7 +11,7 @@ use nom::{
     },
 };
 
-use super::{
+use crate::parser::{
     Result,
     rfc3261::hostname,
 };

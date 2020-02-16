@@ -1,20 +1,26 @@
-use crate::parser::rfc3261::{
+use crate::parser::{
     Result,
-    token,
-    linear_whitespace,
-    header_colon,
-    comma,
-    equal,
-    generic_param,
-    semicolon,
-    host,
-    colon,
-    port,
-    slash,
-    transport,
-    ipv4_address,
-    ipv6_address,
-    ttl,
+    rfc3261::{
+        tokens::{
+            token,
+            linear_whitespace,
+            header_colon,
+            comma,
+            equal,
+            semicolon,
+            colon,
+            slash,
+        },
+        common::{
+            generic_param,
+            host,
+            port,
+            transport,
+            ipv4_address,
+            ipv6_address,
+            ttl,
+        },
+    },
 };
 
 use nom::{

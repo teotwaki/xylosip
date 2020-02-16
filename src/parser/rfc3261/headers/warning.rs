@@ -1,10 +1,16 @@
-use crate::parser::rfc3261::{
+use crate::parser::{
     Result,
-    token,
-    header_colon,
-    comma,
-    host_port,
-    quoted_string,
+    rfc3261::{
+        tokens::{
+            token,
+            header_colon,
+            comma,
+            quoted_string,
+        },
+        common::{
+            host_port,
+        },
+    },
 };
 
 use nom::{

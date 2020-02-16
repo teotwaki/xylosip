@@ -1,16 +1,17 @@
-use super::{
-    newline,
-    headers,
-    message_body,
+use crate::parser::{
+    Result,
+    rfc3261::{
+        headers,
+        tokens::newline,
+        common::message_body,
+    },
 };
 
 use nom::{
-    combinator::{ opt, recognize },
+    multi::many0,
     sequence::tuple,
-    multi:: many0,
+    combinator::{ opt, recognize },
 };
-
-use crate::parser::Result;
 
 pub fn response(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
@@ -24,14 +25,20 @@ pub fn response(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 mod status {
-    use crate::parser::rfc3261::{
+    use crate::parser::{
         Result,
+        rfc3261::{
+            tokens::{
         is_reserved,
         is_unreserved,
         is_utf8_nonascii,
         is_utf8_cont,
         newline,
+            },
+            common::{
         sip_version,
+            },
+        },
     };
 
     use nom::{

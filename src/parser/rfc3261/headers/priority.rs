@@ -1,7 +1,9 @@
-use crate::parser::rfc3261::{
+use crate::parser::{
     Result,
-    header_colon,
-    token,
+    rfc3261::tokens::{
+        header_colon,
+        token,
+    },
 };
 
 use nom::{
