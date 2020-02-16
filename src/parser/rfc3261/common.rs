@@ -309,38 +309,14 @@ fn headers(input: &[u8]) -> Result<&[u8], &[u8]> {
     )(input)
 }
 
-fn invite(input: &[u8]) -> Result<&[u8], &[u8]> {
-    tag("INVITE")(input)
-}
-
-fn ack(input: &[u8]) -> Result<&[u8], &[u8]> {
-    tag("ACK")(input)
-}
-
-fn options(input: &[u8]) -> Result<&[u8], &[u8]> {
-    tag("OPTIONS")(input)
-}
-
-fn bye(input: &[u8]) -> Result<&[u8], &[u8]> {
-    tag("BYE")(input)
-}
-
-fn cancel(input: &[u8]) -> Result<&[u8], &[u8]> {
-    tag("CANCEL")(input)
-}
-
-fn register(input: &[u8]) -> Result<&[u8], &[u8]> {
-    tag("REGISTER")(input)
-}
-
 pub fn method(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
-        invite,
-        ack,
-        options,
-        bye,
-        cancel,
-        register,
+        tag("INVITE"),
+        tag("ACK"),
+        tag("OPTIONS"),
+        tag("BYE"),
+        tag("CANCEL"),
+        tag("REGISTER"),
         tokens::token,
     ))(input)
 }
