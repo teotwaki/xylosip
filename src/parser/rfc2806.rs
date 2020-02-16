@@ -6,6 +6,7 @@ use nom::{
     character::{ is_digit, is_alphanumeric },
     bytes::complete::{
         tag,
+        tag_no_case,
         take_while,
         take_while_m_n,
     },
@@ -38,7 +39,7 @@ fn base_phone_number(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(many1(phone_digit))(input)
 }
 
-const DTMF_DIGITS: &'static [u8] = b"*#ABCD";
+const DTMF_DIGITS: &'static [u8] = b"*#ABCDabcd";
 
 fn is_dtmf_digit(i: u8) -> bool {
     DTMF_DIGITS.contains(&i)
@@ -90,7 +91,7 @@ pub fn telephone_subscriber(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 fn service_provider(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(pair(tag(";tsp="), hostname))(input)
+    recognize(pair(tag_no_case(";tsp="), hostname))(input)
 }
 
 const FUTURE_EXTENSION_TOKEN_CHARS: &'static [u8] = b"!#$%&'*+-.^_`|~";

@@ -28,7 +28,7 @@ use nom::{
     sequence::{ pair, tuple },
     multi::many0,
     branch::alt,
-    bytes::complete::tag,
+    bytes::complete::tag_no_case,
 };
 
 fn sent_by(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -42,7 +42,7 @@ fn sent_by(input: &[u8]) -> Result<&[u8], &[u8]> {
 
 fn protocol_name(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
-        tag("SIP"),
+        tag_no_case("SIP"),
         token,
     ))(input)
 }
@@ -62,7 +62,7 @@ fn sent_protocol(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn via_branch(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("branch"),
+            tag_no_case("branch"),
             equal,
             token,
         ))
@@ -72,7 +72,7 @@ fn via_branch(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn via_received(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("received"),
+            tag_no_case("received"),
             equal,
             alt((ipv4_address, ipv6_address)),
         ))
@@ -82,7 +82,7 @@ fn via_received(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn via_maddr(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("maddr"),
+            tag_no_case("maddr"),
             equal,
             host,
         ))
@@ -92,7 +92,7 @@ fn via_maddr(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn via_ttl(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("ttl"),
+            tag_no_case("ttl"),
             equal,
             ttl,
         ))
@@ -123,7 +123,7 @@ fn via_parm(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn via(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            alt((tag("Via"), tag("v"))),
+            alt((tag_no_case("Via"), tag_no_case("v"))),
             header_colon,
             via_parm,
             many0(pair(comma, via_parm))

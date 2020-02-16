@@ -21,6 +21,7 @@ use nom::{
     character::is_digit,
     bytes::complete::{
         tag,
+        tag_no_case,
         take_while_m_n,
     },
 };
@@ -40,7 +41,7 @@ fn warning_value(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn warning(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Warning"),
+            tag_no_case("Warning"),
             header_colon,
             warning_value,
             many0(pair(comma, warning_value))

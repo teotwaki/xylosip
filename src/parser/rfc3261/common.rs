@@ -15,6 +15,7 @@ use nom::{
     character::complete::{ digit1, alpha1 },
     bytes::complete::{
         tag,
+        tag_no_case,
         take_while,
         take_while1,
         take_while_m_n,
@@ -41,7 +42,7 @@ fn user_info(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn sip_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("sip:"),
+            tag_no_case("sip:"),
             opt(user_info),
             host_port,
             uri_parameters,
@@ -53,7 +54,7 @@ pub fn sip_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn sips_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("sips:"),
+            tag_no_case("sips:"),
             opt(user_info),
             host_port,
             uri_parameters,
@@ -190,10 +191,10 @@ pub fn host_port(input: &[u8]) -> Result<&[u8], &[u8]> {
 
 pub fn transport(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
-        tag("udp"),
-        tag("tcp"),
-        tag("sctp"),
-        tag("tls"),
+        tag_no_case("udp"),
+        tag_no_case("tcp"),
+        tag_no_case("sctp"),
+        tag_no_case("tls"),
         tokens::token,
     ))(input)
 }
@@ -201,7 +202,7 @@ pub fn transport(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn transport_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            tag("transport="),
+            tag_no_case("transport="),
             transport,
         )
     )(input)
@@ -210,10 +211,10 @@ fn transport_param(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn user_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            tag("user="),
+            tag_no_case("user="),
             alt((
-                tag("phone"),
-                tag("ip"),
+                tag_no_case("phone"),
+                tag_no_case("ip"),
                 tokens::token,
             ))
         )
@@ -223,7 +224,7 @@ fn user_param(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn method_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            tag("method="),
+            tag_no_case("method="),
             method,
         )
     )(input)
@@ -232,7 +233,7 @@ fn method_param(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn ttl_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            tag("ttl="),
+            tag_no_case("ttl="),
             ttl,
         )
     )(input)
@@ -246,14 +247,14 @@ pub fn ttl(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn maddr_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            tag("maddr="),
+            tag_no_case("maddr="),
             host,
         )
     )(input)
 }
 
 fn lr_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    tag("lr")(input)
+    tag_no_case("lr")(input)
 }
 
 fn other_param(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -324,7 +325,7 @@ pub fn method(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn sip_version(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("SIP/"),
+            tag_no_case("SIP/"),
             digit1,
             tag("."),
             digit1,
@@ -455,7 +456,7 @@ pub fn qvalue(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn accept_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
         recognize(tuple((
-            tag("q"),
+            tag_no_case("q"),
             tokens::equal,
             qvalue
         ))),

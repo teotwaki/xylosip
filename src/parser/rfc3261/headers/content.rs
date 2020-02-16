@@ -24,18 +24,18 @@ use nom::{
     multi::many0,
     character::is_alphabetic,
     character::complete::digit1,
-    bytes::complete::{ tag, take_while_m_n, },
+    bytes::complete::{ tag, tag_no_case, take_while_m_n, },
 };
 
 fn m_type(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
-        tag("text"),
-        tag("image"),
-        tag("audio"),
-        tag("video"),
-        tag("application"),
-        tag("message"),
-        tag("multipart"),
+        tag_no_case("text"),
+        tag_no_case("image"),
+        tag_no_case("audio"),
+        tag_no_case("video"),
+        tag_no_case("application"),
+        tag_no_case("message"),
+        tag_no_case("multipart"),
         extension_token,
     ))(input)
 }
@@ -79,7 +79,7 @@ fn accept_range(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn accept(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Accept"),
+            tag_no_case("Accept"),
             header_colon,
             opt(pair(accept_range, many0(pair(comma, accept_range))))
         ))
@@ -105,7 +105,7 @@ fn encoding(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn accept_encoding(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Accept-Encoding"),
+            tag_no_case("Accept-Encoding"),
             header_colon,
             opt(pair(encoding, many0(pair(comma, encoding))))
         ))
@@ -134,7 +134,7 @@ fn language(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn accept_language(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Accept-Language"),
+            tag_no_case("Accept-Language"),
             header_colon,
             opt(pair(language, many0(pair(comma, language))))
         ))
@@ -144,7 +144,7 @@ pub fn accept_language(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn extension_token(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
         token,
-        recognize(pair(tag("x-"), token)),
+        recognize(pair(tag_no_case("x-"), token)),
     ))(input)
 }
 
@@ -163,8 +163,8 @@ pub fn content_type(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             alt((
-                tag("Content-Type"),
-                tag("c"),
+                tag_no_case("Content-Type"),
+                tag_no_case("c"),
             )),
             header_colon,
             media_type,
@@ -176,8 +176,8 @@ pub fn content_length(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             alt((
-                tag("Content-Length"),
-                tag("l"),
+                tag_no_case("Content-Length"),
+                tag_no_case("l"),
             )),
             header_colon,
             digit1,
@@ -189,8 +189,8 @@ pub fn content_encoding(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             alt((
-                tag("Content-Encoding"),
-                tag("e"),
+                tag_no_case("Content-Encoding"),
+                tag_no_case("e"),
             )),
             header_colon,
             token,
@@ -202,11 +202,11 @@ pub fn content_encoding(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn handling_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("handling"),
+            tag_no_case("handling"),
             equal,
             alt((
-                tag("optional"),
-                tag("required"),
+                tag_no_case("optional"),
+                tag_no_case("required"),
                 token,
             )),
         ))
@@ -215,10 +215,10 @@ fn handling_param(input: &[u8]) -> Result<&[u8], &[u8]> {
 
 fn disp_type(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
-        tag("render"),
-        tag("session"),
-        tag("icon"),
-        tag("alert"),
+        tag_no_case("render"),
+        tag_no_case("session"),
+        tag_no_case("icon"),
+        tag_no_case("alert"),
         token,
     ))(input)
 }
@@ -227,7 +227,7 @@ fn disp_type(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn content_disposition(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Content-Disposition"),
+            tag_no_case("Content-Disposition"),
             header_colon,
             disp_type,
             many0(pair(semicolon, alt((handling_param, generic_param))))
@@ -247,7 +247,7 @@ fn language_tag(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn content_language(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Content-Language"),
+            tag_no_case("Content-Language"),
             header_colon,
             language_tag,
             many0(pair(comma, language_tag))

@@ -22,7 +22,7 @@ use nom::{
     sequence::{ pair, tuple },
     multi::many0,
     branch::alt,
-    bytes::complete::tag,
+    bytes::complete::{ tag, tag_no_case },
 };
 
 fn callid(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -38,8 +38,8 @@ pub fn call_id(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             alt((
-                tag("Call-ID"),
-                tag("i"),
+                tag_no_case("Call-ID"),
+                tag_no_case("i"),
             )),
             header_colon,
             callid
@@ -50,13 +50,13 @@ pub fn call_id(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn info_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
         recognize(tuple((
-            tag("purpose"),
+            tag_no_case("purpose"),
             equal,
             alt((
-                tag("icon"),
-                tag("info"),
-                tag("card"),
-                tag("token")
+                tag_no_case("icon"),
+                tag_no_case("info"),
+                tag_no_case("card"),
+                tag_no_case("token")
             ))
         ))),
         generic_param,
@@ -77,7 +77,7 @@ fn info(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn call_info(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Call-Info"),
+            tag_no_case("Call-Info"),
             header_colon,
             info,
             many0(pair(comma, info))
@@ -88,7 +88,7 @@ pub fn call_info(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn in_reply_to(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("In-Reply-To"),
+            tag_no_case("In-Reply-To"),
             header_colon,
             callid,
             many0(pair(comma, callid))

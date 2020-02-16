@@ -36,7 +36,7 @@ use nom::{
     branch::alt,
     multi:: many0,
     character::complete::{ digit0, digit1 },
-    bytes::complete::{ tag, take_while, },
+    bytes::complete::{ tag, tag_no_case, take_while, },
 };
 
 use crate::parser::Result;
@@ -44,7 +44,7 @@ use crate::parser::Result;
 fn allow(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Allow"),
+            tag_no_case("Allow"),
             header_colon,
             opt(pair(method, many0(pair(comma, method))))
         ))
@@ -54,7 +54,7 @@ fn allow(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn cseq(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("CSeq"),
+            tag_no_case("CSeq"),
             header_colon,
             digit1,
             linear_whitespace,
@@ -66,7 +66,7 @@ fn cseq(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn expires(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Expires"),
+            tag_no_case("Expires"),
             header_colon,
             digit1
         ))
@@ -76,7 +76,7 @@ fn expires(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn max_forwards(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Max-Forwards"),
+            tag_no_case("Max-Forwards"),
             header_colon,
             digit1
         ))
@@ -86,7 +86,7 @@ fn max_forwards(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn mime_version(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("MIME-Version"),
+            tag_no_case("MIME-Version"),
             header_colon,
             digit1,
             tag("."),
@@ -98,7 +98,7 @@ fn mime_version(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn min_expires(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Min-Expires"),
+            tag_no_case("Min-Expires"),
             header_colon,
             digit1
         ))
@@ -108,7 +108,7 @@ fn min_expires(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn organization(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Organization"),
+            tag_no_case("Organization"),
             header_colon,
             opt(utf8_trim),
         ))
@@ -118,7 +118,7 @@ fn organization(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn require(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Require"),
+            tag_no_case("Require"),
             header_colon,
             token,
             many0(pair(comma, token))
@@ -129,7 +129,7 @@ fn require(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn retry_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
         recognize(tuple((
-            tag("duration"),
+            tag_no_case("duration"),
             equal,
             digit1,
         ))),
@@ -140,7 +140,7 @@ fn retry_param(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn retry_after(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Retry-After"),
+            tag_no_case("Retry-After"),
             header_colon,
             digit1,
             opt(comment),
@@ -162,7 +162,7 @@ fn server_val(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn server(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Server"),
+            tag_no_case("Server"),
             header_colon,
             server_val,
             many0(pair(comma, server_val))
@@ -173,7 +173,7 @@ fn server(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn user_agent(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("User-Agent"),
+            tag_no_case("User-Agent"),
             header_colon,
             server_val,
             many0(pair(linear_whitespace, server_val))
@@ -184,7 +184,7 @@ fn user_agent(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn subject(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            alt((tag("Subject"), tag("s"))),
+            alt((tag_no_case("Subject"), tag_no_case("s"))),
             header_colon,
             opt(utf8_trim),
         ))
@@ -194,7 +194,7 @@ fn subject(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn supported(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            alt((tag("Supported"), tag("k"))),
+            alt((tag_no_case("Supported"), tag_no_case("k"))),
             header_colon,
             token,
             many0(pair(comma, token))
@@ -214,7 +214,7 @@ fn delay(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn timestamp(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Supported"),
+            tag_no_case("Supported"),
             header_colon,
             digit1,
             opt(pair(tag("."), digit0)),
@@ -226,7 +226,7 @@ fn timestamp(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn unsupported(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Unsupported"),
+            tag_no_case("Unsupported"),
             header_colon,
             token,
             many0(pair(comma, token))

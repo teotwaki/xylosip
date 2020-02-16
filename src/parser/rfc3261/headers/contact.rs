@@ -29,13 +29,13 @@ use nom::{
     multi::many0,
     branch::alt,
     character::complete::digit1,
-    bytes::complete::tag,
+    bytes::complete::tag_no_case,
 };
 
 fn c_p_expires(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("expires"),
+            tag_no_case("expires"),
             equal,
             digit1,
         ))
@@ -45,7 +45,7 @@ fn c_p_expires(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn c_p_q(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("q"),
+            tag_no_case("q"),
             equal,
             qvalue,
         ))
@@ -99,8 +99,8 @@ pub fn contact(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             alt((
-                tag("Contact"),
-                tag("m"),
+                tag_no_case("Contact"),
+                tag_no_case("m"),
             )),
             header_colon,
             alt((
@@ -114,7 +114,7 @@ pub fn contact(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn tag_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("tag"),
+            tag_no_case("tag_no_case"),
             equal,
             token,
         ))
@@ -133,7 +133,7 @@ fn from_spec(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn from(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            alt((tag("From"), tag("f"))),
+            alt((tag_no_case("From"), tag_no_case("f"))),
             header_colon,
             from_spec
         ))
@@ -152,7 +152,7 @@ fn rec_route(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn record_route(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Record-Route"),
+            tag_no_case("Record-Route"),
             header_colon,
             rec_route,
             many0(pair(comma, rec_route))
@@ -172,7 +172,7 @@ fn rplyto_spec(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn reply_to(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Reply-To"),
+            tag_no_case("Reply-To"),
             header_colon,
             rplyto_spec
         ))
@@ -191,7 +191,7 @@ fn route_param(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn route(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Route"),
+            tag_no_case("Route"),
             header_colon,
             route_param,
             many0(pair(comma, route_param))
@@ -202,7 +202,7 @@ pub fn route(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn to(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            alt((tag("To"), tag("t"))),
+            alt((tag_no_case("To"), tag_no_case("t"))),
             header_colon,
             alt((name_addr, addr_spec)),
             many0(pair(semicolon, alt((tag_param, generic_param))))

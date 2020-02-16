@@ -19,7 +19,7 @@ use nom::{
     combinator::recognize,
     sequence::{ pair, tuple },
     multi::many0,
-    bytes::complete::tag,
+    bytes::complete::tag_no_case,
 };
 
 fn alert_param(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -36,7 +36,7 @@ fn alert_param(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn alert_info(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Alert-Info"),
+            tag_no_case("Alert-Info"),
             header_colon,
             alert_param,
             many0(pair(comma, alert_param))

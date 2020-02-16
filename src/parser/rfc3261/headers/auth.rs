@@ -29,6 +29,7 @@ use nom::{
     branch::alt,
     bytes::complete::{
         tag,
+        tag_no_case,
         take_while,
         take_while1,
         take_while_m_n,
@@ -69,7 +70,7 @@ fn request_digest(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn dresponse(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("response"),
+            tag_no_case("response"),
             equal,
             request_digest,
         ))
@@ -83,7 +84,7 @@ fn nc_value(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn nonce_count(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("nc"),
+            tag_no_case("nc"),
             equal,
             nc_value
         ))
@@ -93,7 +94,7 @@ fn nonce_count(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn cnonce(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("cnonce"),
+            tag_no_case("cnonce"),
             equal,
             quoted_string,
         ))
@@ -102,8 +103,8 @@ fn cnonce(input: &[u8]) -> Result<&[u8], &[u8]> {
 
 fn qop_value(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
-        tag("auth"),
-        tag("auth-int"),
+        tag_no_case("auth"),
+        tag_no_case("auth-int"),
         token,
     ))(input)
 }
@@ -111,7 +112,7 @@ fn qop_value(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn message_qop(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("qop"),
+            tag_no_case("qop"),
             equal,
             qop_value,
         ))
@@ -130,7 +131,7 @@ fn digest_uri_value(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn digest_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("uri"),
+            tag_no_case("uri"),
             equal,
             left_double_quote,
             digest_uri_value,
@@ -142,7 +143,7 @@ fn digest_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn username(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("username"),
+            tag_no_case("username"),
             equal,
             quoted_string
         ))
@@ -168,7 +169,7 @@ fn dig_resp(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn realm(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("realm"),
+            tag_no_case("realm"),
             equal,
             quoted_string
         ))
@@ -178,7 +179,7 @@ fn realm(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn nonce(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("none"),
+            tag_no_case("nonce"),
             equal,
             quoted_string
         ))
@@ -188,7 +189,7 @@ fn nonce(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn opaque(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("opaque"),
+            tag_no_case("opaque"),
             equal,
             quoted_string
         ))
@@ -198,9 +199,9 @@ fn opaque(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn algorithm(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("algorithm"),
+            tag_no_case("algorithm"),
             equal,
-            alt((tag("MD5"), tag("MD5-sess"), token))
+            alt((tag_no_case("MD5"), tag_no_case("MD5-sess"), token))
         ))
     )(input)
 }
@@ -217,7 +218,7 @@ fn digest_response(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn credentials(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
         recognize(tuple((
-            tag("Digest"),
+            tag_no_case("Digest"),
             linear_whitespace,
             digest_response,
         ))),
@@ -228,7 +229,7 @@ fn credentials(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn authorization(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Authorization"),
+            tag_no_case("Authorization"),
             header_colon,
             credentials,
         ))
@@ -248,7 +249,7 @@ fn response_digest(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn response_auth(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("rspauth"),
+            tag_no_case("rspauth"),
             equal,
             response_digest,
         ))
@@ -258,7 +259,7 @@ fn response_auth(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn nextnonce(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("nextnonce"),
+            tag_no_case("nextnonce"),
             equal,
             quoted_string,
         ))
@@ -278,7 +279,7 @@ fn ainfo(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn authentication_info(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Authentication-Info"),
+            tag_no_case("Authentication-Info"),
             header_colon,
             ainfo,
             many0(pair(comma, ainfo)),
@@ -289,7 +290,7 @@ pub fn authentication_info(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn qop_options(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("qop"),
+            tag_no_case("qop"),
             equal,
             left_double_quote,
             qop_value,
@@ -302,9 +303,9 @@ fn qop_options(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn stale(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("stale"),
+            tag_no_case("stale"),
             equal,
-            alt((tag("true"), tag("false")))
+            alt((tag_no_case("true"), tag_no_case("false")))
         ))
     )(input)
 }
@@ -312,7 +313,7 @@ fn stale(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn domain(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("domain"),
+            tag_no_case("domain"),
             equal,
             left_double_quote,
             alt((absolute_uri, abs_path)),
@@ -349,7 +350,7 @@ fn other_challenge(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn challenge(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
         recognize(tuple((
-            tag("Digest"),
+            tag_no_case("Digest"),
             linear_whitespace,
             digest_cln,
             many0(pair(comma, digest_cln))
@@ -361,7 +362,7 @@ fn challenge(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn proxy_authenticate(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Proxy-Authenticate"),
+            tag_no_case("Proxy-Authenticate"),
             header_colon,
             challenge,
         ))
@@ -371,7 +372,7 @@ pub fn proxy_authenticate(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn proxy_authorization(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Proxy-Authorization"),
+            tag_no_case("Proxy-Authorization"),
             header_colon,
             credentials,
         ))
@@ -381,7 +382,7 @@ pub fn proxy_authorization(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn proxy_require(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Proxy-Authorization"),
+            tag_no_case("Proxy-Authorization"),
             header_colon,
             token,
             many0(pair(comma, token))
@@ -392,7 +393,7 @@ pub fn proxy_require(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn www_authenticate(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("WWW-Authenticate"),
+            tag_no_case("WWW-Authenticate"),
             header_colon,
             challenge,
         ))

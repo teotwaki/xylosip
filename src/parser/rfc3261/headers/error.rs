@@ -19,7 +19,7 @@ use nom::{
     combinator::recognize,
     sequence::{ pair, tuple },
     multi::many0,
-    bytes::complete::tag,
+    bytes::complete::tag_no_case,
 };
 
 fn error_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -36,7 +36,7 @@ fn error_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn error_info(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
-            tag("Error-Info"),
+            tag_no_case("Error-Info"),
             header_colon,
             error_uri,
             many0(pair(comma, error_uri))
