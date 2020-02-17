@@ -29,6 +29,7 @@ use nom::{
 };
 
 fn warning_value(input: &[u8]) -> Result<&[u8], Warning> {
+    // TODO: Parse code into an enum
     let (input, (code, _, agent, _, text)) = tuple((
         take_while_m_n(3, 3, is_digit),
         tag(" "),

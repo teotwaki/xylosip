@@ -23,14 +23,8 @@ pub struct RequestLine<'a> {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum RetryParam<'a> {
-    Duration(&'a [u8]),
-    Extension(GenericParam<'a>),
-}
-
-#[derive(PartialEq, Debug, Clone)]
 pub enum ViaParam<'a> {
-    Ttl(&'a [u8]),
+    Ttl(i32),
     MAddr(&'a [u8]),
     Received(&'a [u8]),
     Branch(&'a [u8]),
@@ -191,7 +185,7 @@ pub struct From<'a> {
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContactParam<'a> {
     Q(&'a [u8]),
-    Expires(&'a [u8]),
+    Expires(i32),
     Extension(GenericParam<'a>),
 }
 
@@ -204,7 +198,7 @@ pub struct Contact<'a> {
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ContactValue<'a> {
-    Star,
+    Any,
     Specific(Vec<Contact<'a>>),
 }
 
@@ -322,6 +316,19 @@ pub struct ContentDisposition<'a> {
 }
 
 #[derive(PartialEq, Debug, Clone)]
+pub enum RetryParam<'a> {
+    AvailabilityDuration(i32),
+    Extension(GenericParam<'a>),
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct RetryAfter<'a> {
+    pub duration: i32,
+    pub comment: Option<&'a [u8]>,
+    pub params: Vec<RetryParam<'a>>,
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub enum Header<'a> {
     Accept(Vec<Accept<'a>>),
     AcceptEncoding(Vec<Encoding<'a>>),
@@ -338,16 +345,16 @@ pub enum Header<'a> {
     ContentLanguage(Vec<&'a [u8]>),
     ContentLength(&'a [u8]),
     ContentType(Media<'a>),
-    CSeq(&'a [u8], Method<'a>),
+    CSeq(i32, Method<'a>),
     Date(&'a [u8]),
     ErrorInfo(Vec<ErrorInfo<'a>>),
-    Expires(&'a [u8]),
+    Expires(i32),
     From(From<'a>),
     Via(Vec<Via<'a>>),
     InReplyTo(Vec<&'a [u8]>),
-    MaxForwards(&'a [u8]),
+    MaxForwards(i32),
     MIMEVersion(&'a [u8]),
-    MinExpires(&'a [u8]),
+    MinExpires(i32),
     Organization(Option<&'a [u8]>),
     Priority(Priority<'a>),
     ProxyAuthenticate(Challenge<'a>),
@@ -356,7 +363,7 @@ pub enum Header<'a> {
     RecordRoute(Vec<RecordRoute<'a>>),
     ReplyTo(ReplyTo<'a>),
     Require(Vec<&'a [u8]>),
-    RetryAfter(&'a [u8], Option<&'a [u8]>, Vec<RetryParam<'a>>),
+    RetryAfter(RetryAfter<'a>),
     Route(Vec<Route<'a>>),
     Server(&'a [u8]),
     Subject(Option<&'a [u8]>),

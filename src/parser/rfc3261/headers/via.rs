@@ -1,6 +1,7 @@
 use crate::{
     message::{ Header, ViaParam, Via },
     parser::{
+        integer,
         Result,
         rfc3261::{
             tokens::{
@@ -20,7 +21,6 @@ use crate::{
                 transport,
                 ipv4_address,
                 ipv6_address,
-                ttl,
             },
         },
     },
@@ -102,7 +102,7 @@ fn via_ttl(input: &[u8]) -> Result<&[u8], ViaParam> {
     let (input, (_, _, ttl)) = tuple((
         tag_no_case("ttl"),
         equal,
-        ttl,
+        integer,
     ))(input)?;
 
     Ok((input, ViaParam::Ttl(ttl)))

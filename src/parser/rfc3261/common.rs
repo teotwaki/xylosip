@@ -1,6 +1,7 @@
 use crate::{
     message::{ Method, Version, GenericParam, },
     parser::{
+        integer,
         Error,
         ErrorKind,
         Result,
@@ -10,7 +11,7 @@ use crate::{
 };
 
 use nom::{
-    combinator::{ opt, recognize },
+    combinator::{ opt, recognize, },
     sequence::{ pair, tuple },
     branch::alt,
     multi::{ many0, many1, many_m_n, },
@@ -242,9 +243,18 @@ fn ttl_param(input: &[u8]) -> Result<&[u8], &[u8]> {
     )(input)
 }
 
-pub fn ttl(input: &[u8]) -> Result<&[u8], &[u8]> {
-    // TODO: Ensure TTL is between 0 and 255.
-    take_while_m_n(1, 3, is_digit)(input)
+pub fn ttl(input: &[u8]) -> Result<&[u8], i32> {
+    let (input, ttl) = take_while_m_n(1, 3, is_digit)(input)?;
+    let (_, ttl) = integer(ttl)?;
+
+    if ttl < 0 || ttl > 255 {
+        Err(nom::Err::Failure(Error {
+            kind: ErrorKind::InvalidTTLValue,
+            backtrace: vec![],
+        }))
+    } else {
+        Ok((input, ttl))
+    }
 }
 
 fn maddr_param(input: &[u8]) -> Result<&[u8], &[u8]> {

@@ -18,6 +18,8 @@ pub enum ErrorKind<'a, I> {
     Utf8Error(std::str::Utf8Error),
     InvalidHostname(&'a [u8]),
     InvalidDomainPart(&'a [u8]),
+    InvalidIntegerError,
+    InvalidTTLValue,
 }
 
 impl<'a, I> ParseError<I> for Error<'a, I> {
@@ -53,3 +55,17 @@ impl<'a, I> From<std::str::Utf8Error> for Error<'a, I> {
 }
 
 type Result<'a, I, T> = nom::IResult<I, T, Error<'a, I>>;
+
+fn integer<T>(input: &[u8]) -> Result<&[u8], T>
+   where T: atoi::FromRadix10Checked
+{
+    let (input, i) = nom::character::complete::digit1(input)?;
+
+    match atoi::atoi(i) {
+        Some(i) => Ok((input, i)),
+        None => Err(nom::Err::Failure(Error {
+            kind: ErrorKind::InvalidIntegerError,
+            backtrace: Vec::new(),
+        }))
+    }
+}

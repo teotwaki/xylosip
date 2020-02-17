@@ -1,6 +1,19 @@
 use crate::{
-    message::{ Header, To, ToParam, Route, ReplyTo, RecordRoute, From, FromParam, Contact, ContactValue, ContactParam, },
+    message::{
+        Header,
+        To,
+        ToParam,
+        Route,
+        ReplyTo,
+        RecordRoute,
+        From,
+        FromParam,
+        Contact,
+        ContactValue,
+        ContactParam,
+    },
     parser::{
+        integer,
         Result,
         rfc3261::{
             tokens::{
@@ -32,7 +45,6 @@ use nom::{
     sequence::{ pair, tuple },
     multi::many0,
     branch::alt,
-    character::complete::digit1,
     bytes::complete::tag_no_case,
 };
 
@@ -40,7 +52,7 @@ fn contact_params_expires(input: &[u8]) -> Result<&[u8], ContactParam> {
     let (input, (_, _, expires)) = tuple((
         tag_no_case("expires"),
         equal,
-        digit1,
+        integer,
     ))(input)?;
 
     Ok((input, ContactParam::Expires(expires)))
@@ -115,7 +127,7 @@ fn contact_param(input: &[u8]) -> Result<&[u8], Contact> {
 fn contact_star(input: &[u8]) -> Result<&[u8], ContactValue> {
     let (input, _) = star(input)?;
 
-    Ok((input, ContactValue::Star))
+    Ok((input, ContactValue::Any))
 }
 
 fn contact_specific(input: &[u8]) -> Result<&[u8], ContactValue> {

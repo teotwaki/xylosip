@@ -10,26 +10,29 @@ mod via;
 mod warning;
 
 use crate::{
-    message::{ Header, RetryParam, Method },
-    parser::rfc3261::{
-        tokens::{
-            header_colon,
-            token,
-            utf8_char1,
-            is_utf8_cont,
-            linear_whitespace,
-            newline,
-            comma,
-            utf8_trim,
-            equal,
-            slash,
-            semicolon,
-            comment,
-        },
-        common::{
-            method,
-            generic_param,
-            option_tag,
+    message::{ Header, RetryParam, RetryAfter, Method, },
+    parser::{
+        integer,
+        rfc3261::{
+            tokens::{
+                header_colon,
+                token,
+                utf8_char1,
+                is_utf8_cont,
+                linear_whitespace,
+                newline,
+                comma,
+                utf8_trim,
+                equal,
+                slash,
+                semicolon,
+                comment,
+            },
+            common::{
+                method,
+                generic_param,
+                option_tag,
+            },
         },
     },
 };
@@ -77,7 +80,7 @@ fn cseq(input: &[u8]) -> Result<&[u8], Header> {
     let (input, (_, _, cseq, _, method)) = tuple((
         tag_no_case("CSeq"),
         header_colon,
-        digit1,
+        integer,
         linear_whitespace,
         method,
     ))(input)?;
@@ -89,7 +92,7 @@ fn expires(input: &[u8]) -> Result<&[u8], Header> {
     let (input, (_, _, e)) = tuple((
         tag_no_case("Expires"),
         header_colon,
-        digit1
+        integer,
     ))(input)?;
 
     Ok((input, Header::Expires(e)))
@@ -99,7 +102,7 @@ fn max_forwards(input: &[u8]) -> Result<&[u8], Header> {
     let (input, (_, _, mf)) = tuple((
         tag_no_case("Max-Forwards"),
         header_colon,
-        digit1
+        integer
     ))(input)?;
 
     Ok((input, Header::MaxForwards(mf)))
@@ -123,7 +126,7 @@ fn min_expires(input: &[u8]) -> Result<&[u8], Header> {
     let (input, (_, _, me)) = tuple((
         tag_no_case("Min-Expires"),
         header_colon,
-        digit1
+        integer,
     ))(input)?;
 
     Ok((input, Header::MinExpires(me)))
@@ -155,10 +158,10 @@ fn duration_retry_param(input: &[u8]) -> Result<&[u8], RetryParam> {
     let (input, (_, _, duration)) = tuple((
         tag_no_case("duration"),
         equal,
-        digit1,
+        integer
     ))(input)?;
 
-    Ok((input, RetryParam::Duration(duration)))
+    Ok((input, RetryParam::AvailabilityDuration(duration)))
 }
 
 fn generic_retry_param(input: &[u8]) -> Result<&[u8], RetryParam> {
@@ -182,15 +185,19 @@ fn retry_params(input: &[u8]) -> Result<&[u8], Vec<RetryParam>> {
 }
 
 fn retry_after(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, ra, comment, params)) = tuple((
+    let (input, (_, _, duration, comment, params)) = tuple((
         tag_no_case("Retry-After"),
         header_colon,
-        digit1,
+        integer,
         opt(comment),
         retry_params
     ))(input)?;
 
-    Ok((input, Header::RetryAfter(ra, comment, params)))
+    Ok((input, Header::RetryAfter(RetryAfter {
+        duration,
+        comment,
+        params
+    })))
 }
 
 fn server_val(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -408,8 +415,8 @@ mod tests {
         let h = b"Max-Forwards: 70\r\n";
         let header = message_header(h).unwrap().1;
         match header {
-            Header::MaxForwards(v) => {
-                assert_eq!(v, b"70");
+            Header::MaxForwards(mf) => {
+                assert_eq!(mf, 70);
             },
             _ => panic!()
 
