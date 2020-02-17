@@ -1,5 +1,5 @@
 use crate::{
-    message::{ Method, Version, },
+    message::{ Method, Version, GenericParam, },
     parser::{
         Error,
         ErrorKind,
@@ -13,7 +13,7 @@ use nom::{
     combinator::{ opt, recognize },
     sequence::{ pair, tuple },
     branch::alt,
-    multi::{ many0, many1, many_m_n },
+    multi::{ many0, many1, many_m_n, },
     character::{ is_digit, is_hex_digit },
     character::complete::{ digit1, alpha1 },
     bytes::complete::{
@@ -481,36 +481,50 @@ pub fn absolute_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
 
 fn gen_value(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
-        tokens::token,
         host,
+        tokens::token,
         tokens::quoted_string,
     ))(input)
 }
 
-pub fn generic_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            tokens::token,
-            opt(pair(tokens::equal, gen_value))
-        )
-    )(input)
+pub fn generic_param(input: &[u8]) -> Result<&[u8], GenericParam> {
+    let (input, (name, value)) = pair(
+        tokens::token,
+        opt(pair(tokens::equal, gen_value))
+    )(input)?;
+
+    let param = match value {
+        Some((_, value)) => GenericParam {
+            name,
+            value: Some(value),
+        },
+        _ => GenericParam {
+            name,
+            value: None,
+        }
+    };
+
+    Ok((input, param))
+}
+
+pub fn generic_params(input: &[u8]) -> Result<&[u8], Vec<GenericParam>> {
+    let (input, params) = many0(pair(tokens::semicolon, generic_param))(input)?;
+    let params = params.into_iter().map(|(_, param)| param).collect();
+
+    Ok((input, params))
+}
+
+pub fn option_tag(input: &[u8]) -> Result<&[u8], Vec<&[u8]>> {
+    let (input, options) = many0(pair(tokens::comma, tokens::token))(input)?;
+    let options = options.into_iter().map(|(_, option)| option).collect();
+
+    Ok((input, options))
 }
 
 pub fn qvalue(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
         recognize(pair(tag("0"), opt(pair(tag("."), take_while_m_n(0, 3, is_digit))))),
         recognize(pair(tag("1"), opt(pair(tag("."), many_m_n(0, 3, tag("0")))))),
-    ))(input)
-}
-
-pub fn accept_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    alt((
-        recognize(tuple((
-            tag_no_case("q"),
-            tokens::equal,
-            qvalue
-        ))),
-        generic_param
     ))(input)
 }
 

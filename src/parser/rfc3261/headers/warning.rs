@@ -1,20 +1,22 @@
-use crate::parser::{
-    Result,
-    rfc3261::{
-        tokens::{
-            token,
-            header_colon,
-            comma,
-            quoted_string,
-        },
-        common::{
-            host_port,
+use crate::{
+    message::{ Header, Warning, },
+    parser::{
+        Result,
+        rfc3261::{
+            tokens::{
+                token,
+                header_colon,
+                comma,
+                quoted_string,
+            },
+            common::{
+                host_port,
+            },
         },
     },
 };
 
 use nom::{
-    combinator::recognize,
     sequence::{ pair, tuple },
     multi::many0,
     branch::alt,
@@ -26,25 +28,31 @@ use nom::{
     },
 };
 
-fn warning_value(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            take_while_m_n(3, 3, is_digit),
-            tag(" "),
-            alt((host_port, token)),
-            tag(" "),
-            quoted_string,
-        ))
-    )(input)
+fn warning_value(input: &[u8]) -> Result<&[u8], Warning> {
+    let (input, (code, _, agent, _, text)) = tuple((
+        take_while_m_n(3, 3, is_digit),
+        tag(" "),
+        alt((host_port, token)),
+        tag(" "),
+        quoted_string,
+    ))(input)?;
+
+    Ok((input, Warning {
+        code,
+        agent,
+        text
+    }))
 }
 
-pub fn warning(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            tag_no_case("Warning"),
-            header_colon,
-            warning_value,
-            many0(pair(comma, warning_value))
-        ))
-    )(input)
+pub fn warning(input: &[u8]) -> Result<&[u8], Header> {
+    let (input, (_, _, first, others)) = tuple((
+        tag_no_case("Warning"),
+        header_colon,
+        warning_value,
+        many0(pair(comma, warning_value))
+    ))(input)?;
+    let mut others: Vec<Warning> = others.into_iter().map(|(_, warning)| warning).collect();
+    others.insert(0, first);
+
+    Ok((input, Header::Warning(others)))
 }

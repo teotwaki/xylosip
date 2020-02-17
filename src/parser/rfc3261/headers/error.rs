@@ -1,45 +1,51 @@
-use crate::parser::{
-    Result,
-    rfc3261::{
-        tokens::{
-            semicolon,
-            header_colon,
-            comma,
-            left_angle_quote,
-            right_angle_quote,
-        },
-        common::{
-            generic_param,
-            absolute_uri,
+use crate::{
+    message::{ Header, ErrorInfo, },
+    parser::{
+        Result,
+        rfc3261::{
+            tokens::{
+                header_colon,
+                comma,
+                left_angle_quote,
+                right_angle_quote,
+            },
+            common::{
+                generic_params,
+                absolute_uri,
+            },
         },
     },
 };
 
 use nom::{
-    combinator::recognize,
     sequence::{ pair, tuple },
     multi::many0,
     bytes::complete::tag_no_case,
 };
 
-fn error_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            left_angle_quote,
-            absolute_uri,
-            right_angle_quote,
-            many0(pair(semicolon, generic_param))
-        ))
-    )(input)
+fn error_uri(input: &[u8]) -> Result<&[u8], ErrorInfo> {
+    let (input, (_, uri, _, params)) = tuple((
+        left_angle_quote,
+        absolute_uri,
+        right_angle_quote,
+        generic_params
+    ))(input)?;
+
+    Ok((input, ErrorInfo {
+        uri,
+        params,
+    }))
 }
 
-pub fn error_info(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            tag_no_case("Error-Info"),
-            header_colon,
-            error_uri,
-            many0(pair(comma, error_uri))
-        ))
-    )(input)
+pub fn error_info(input: &[u8]) -> Result<&[u8], Header> {
+    let (input, (_, _, first, others)) = tuple((
+        tag_no_case("Error-Info"),
+        header_colon,
+        error_uri,
+        many0(pair(comma, error_uri))
+    ))(input)?;
+    let mut others: Vec<ErrorInfo> = others.into_iter().map(|(_, info)| info).collect();
+    others.insert(0, first);
+
+    Ok((input, Header::ErrorInfo(others)))
 }

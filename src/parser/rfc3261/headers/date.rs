@@ -1,6 +1,9 @@
-use crate::parser::{
-    Result,
-    rfc3261::tokens::header_colon,
+use crate::{
+    message::Header,
+    parser::{
+        Result,
+        rfc3261::tokens::header_colon,
+    },
 };
 
 use nom::{
@@ -82,12 +85,12 @@ fn rfc1123_date(input: &[u8]) -> Result<&[u8], &[u8]> {
     )(input)
 }
 
-pub fn date(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            tag_no_case("Date"),
-            header_colon,
-            rfc1123_date,
-        ))
-    )(input)
+pub fn date(input: &[u8]) -> Result<&[u8], Header> {
+    let (input, (_, _, date)) = tuple((
+        tag_no_case("Date"),
+        header_colon,
+        rfc1123_date,
+    ))(input)?;
+
+    Ok((input, Header::Date(date)))
 }

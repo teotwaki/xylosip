@@ -53,6 +53,7 @@ pub fn request(input: &[u8]) -> Result<&[u8], Message> {
 
     Ok((input, Message::Request(Request {
         request_line,
+        headers,
         body,
     })))
 }
