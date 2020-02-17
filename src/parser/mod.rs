@@ -22,12 +22,18 @@ pub enum ErrorKind<'a, I> {
     InvalidTTLValue,
 }
 
+impl<'a, I> Error<'a, I> {
+    fn new(kind: ErrorKind<'a, I>) -> Self {
+        Self {
+            kind,
+            backtrace: vec![],
+        }
+    }
+}
+
 impl<'a, I> ParseError<I> for Error<'a, I> {
     fn from_error_kind(input: I, kind: nom::error::ErrorKind) -> Self {
-        Self {
-            kind: ErrorKind::Nom(input, kind),
-            backtrace: Vec::new()
-        }
+        Self::new(ErrorKind::Nom(input, kind))
     }
 
     fn append(input: I, kind: nom::error::ErrorKind, mut other: Self) -> Self {
@@ -38,19 +44,13 @@ impl<'a, I> ParseError<I> for Error<'a, I> {
 
 impl<'a, I> From<std::num::ParseIntError> for Error<'a, I> {
     fn from(error: std::num::ParseIntError) -> Self {
-        Self {
-            kind: ErrorKind::ParseIntError(error),
-            backtrace: Vec::new()
-        }
+        Self::new(ErrorKind::ParseIntError(error))
     }
 }
 
 impl<'a, I> From<std::str::Utf8Error> for Error<'a, I> {
     fn from(error: std::str::Utf8Error) -> Self {
-        Self {
-            kind: ErrorKind::Utf8Error(error),
-            backtrace: Vec::new()
-        }
+        Self::new(ErrorKind::Utf8Error(error))
     }
 }
 
@@ -63,9 +63,8 @@ fn integer<T>(input: &[u8]) -> Result<&[u8], T>
 
     match atoi::atoi(i) {
         Some(i) => Ok((input, i)),
-        None => Err(nom::Err::Failure(Error {
-            kind: ErrorKind::InvalidIntegerError,
-            backtrace: Vec::new(),
-        }))
+        None => Err(nom::Err::Failure(
+            Error::new(ErrorKind::InvalidIntegerError)
+        ))
     }
 }

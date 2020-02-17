@@ -73,10 +73,9 @@ fn top_label(input: &[u8]) -> Result<&[u8], &[u8]> {
     if label.iter().last().unwrap().to_owned() == b'-'
         || !label.iter().nth(0).unwrap().is_ascii_alphabetic()
     {
-        Err(nom::Err::Error(Error {
-            kind: ErrorKind::InvalidDomainPart(label),
-            backtrace: Vec::new()
-        }))
+        Err(nom::Err::Error(
+            Error::new(ErrorKind::InvalidDomainPart(label))
+        ))
     } else {
         Ok((input, label))
     }
@@ -87,10 +86,9 @@ fn domain_label(input: &[u8]) -> Result<&[u8], &[u8]> {
 
     if label.iter().nth(0).unwrap().to_owned() == b'-'
         || label.iter().last().unwrap().to_owned() == b'-' {
-        Err(nom::Err::Error(Error {
-            kind: ErrorKind::InvalidDomainPart(label),
-            backtrace: Vec::new()
-        }))
+        Err(nom::Err::Error(
+            Error::new(ErrorKind::InvalidDomainPart(label))
+        ))
     } else {
         Ok((input, label))
     }
@@ -108,10 +106,9 @@ pub fn hostname(input: &[u8]) -> Result<&[u8], &[u8]> {
         if top_label(top).is_ok() {
             Ok((input, hostname))
         } else {
-            Err(nom::Err::Error(Error {
-                kind: ErrorKind::InvalidHostname(hostname),
-                backtrace: Vec::new(),
-            }))
+            Err(nom::Err::Error(
+                Error::new(ErrorKind::InvalidHostname(hostname))
+            ))
         }
     } else {
         Ok((input, hostname))
@@ -248,10 +245,9 @@ pub fn ttl(input: &[u8]) -> Result<&[u8], i32> {
     let (_, ttl) = integer(ttl)?;
 
     if ttl < 0 || ttl > 255 {
-        Err(nom::Err::Failure(Error {
-            kind: ErrorKind::InvalidTTLValue,
-            backtrace: vec![],
-        }))
+        Err(nom::Err::Failure(
+            Error::new(ErrorKind::InvalidTTLValue)
+        ))
     } else {
         Ok((input, ttl))
     }
