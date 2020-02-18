@@ -1,5 +1,5 @@
 use crate::{
-    message::{ Header, Warning, },
+    message::{ Header, Warning, WarningAgent, },
     parser::{
         Result,
         rfc3261::{
@@ -17,7 +17,7 @@ use crate::{
 };
 
 use nom::{
-    sequence::{ pair, tuple },
+    sequence::{ pair, tuple, preceded },
     multi::many0,
     branch::alt,
     character::is_digit,
@@ -28,14 +28,31 @@ use nom::{
     },
 };
 
+fn warning_agent_host_port(input: &[u8]) -> Result<&[u8], WarningAgent> {
+    let (input, (host, port)) = host_port(input)?;
+
+    Ok((input, WarningAgent::HostPort(host, port)))
+}
+
+fn warning_agent_pseudonym(input: &[u8]) -> Result<&[u8], WarningAgent> {
+    let (input, pseudonym) = token(input)?;
+
+    Ok((input, WarningAgent::Pseudonym(pseudonym)))
+}
+
+fn warning_agent(input: &[u8]) -> Result<&[u8], WarningAgent> {
+    alt((
+        warning_agent_host_port,
+        warning_agent_pseudonym,
+    ))(input)
+}
+
 fn warning_value(input: &[u8]) -> Result<&[u8], Warning> {
     // TODO: Parse code into an enum
-    let (input, (code, _, agent, _, text)) = tuple((
+    let (input, (code, agent, text)) = tuple((
         take_while_m_n(3, 3, is_digit),
-        tag(" "),
-        alt((host_port, token)),
-        tag(" "),
-        quoted_string,
+        preceded(tag(" "), warning_agent),
+        preceded(tag(" "), quoted_string)
     ))(input)?;
 
     Ok((input, Warning {

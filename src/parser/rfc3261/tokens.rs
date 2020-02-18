@@ -2,7 +2,7 @@ use crate::parser::Result;
 
 use nom::{
     combinator::{ opt, recognize },
-    sequence::{ pair, tuple },
+    sequence::{ pair, tuple, preceded, separated_pair, terminated, },
     branch::alt,
     multi::{ many0, many1 },
     character::{ is_alphanumeric, is_hex_digit },
@@ -52,8 +52,8 @@ fn unreserved(input: &[u8]) -> Result<&[u8], &[u8]> {
 
 fn escaped(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
-        pair(
-            nom::character::complete::char('%'),
+        preceded(
+            tag("%"),
             take_while_m_n(2, 2, is_hex_digit)
         )
     )(input)
@@ -81,13 +81,11 @@ fn separator_whitespace(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 pub fn header_colon(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-                space0,
-                nom::character::complete::char(':'),
-                separator_whitespace
-        ))
-    )(input)
+    recognize(separated_pair(
+        space0,
+        tag(":"),
+        separator_whitespace
+    ))(input)
 }
 
 const TOKEN_CHARS: &'static [u8] = b"-.!%*_+`'~`";
@@ -114,7 +112,7 @@ pub fn star(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             separator_whitespace,
-            nom::character::complete::char('*'),
+            tag("*"),
             separator_whitespace,
         ))
     )(input)
@@ -124,7 +122,7 @@ pub fn slash(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             separator_whitespace,
-            nom::character::complete::char('/'),
+            tag("/"),
             separator_whitespace,
         ))
     )(input)
@@ -134,7 +132,7 @@ pub fn equal(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             separator_whitespace,
-            nom::character::complete::char('='),
+            tag("="),
             separator_whitespace,
         ))
     )(input)
@@ -144,7 +142,7 @@ fn left_parenthesis(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             separator_whitespace,
-            nom::character::complete::char('('),
+            tag("("),
             separator_whitespace,
         ))
     )(input)
@@ -154,7 +152,7 @@ fn right_parenthesis(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             separator_whitespace,
-            nom::character::complete::char(')'),
+            tag(")"),
             separator_whitespace,
         ))
     )(input)
@@ -163,7 +161,7 @@ fn right_parenthesis(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn right_angle_quote(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            nom::character::complete::char('>'),
+            tag(">"),
             separator_whitespace,
         )
     )(input)
@@ -172,7 +170,7 @@ pub fn right_angle_quote(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn left_angle_quote(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            nom::character::complete::char('<'),
+            tag("<"),
             separator_whitespace,
         )
     )(input)
@@ -182,7 +180,7 @@ pub fn comma(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             separator_whitespace,
-            nom::character::complete::char(','),
+            tag(","),
             separator_whitespace,
         ))
     )(input)
@@ -192,7 +190,7 @@ pub fn semicolon(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             separator_whitespace,
-            nom::character::complete::char(';'),
+            tag(";"),
             separator_whitespace,
         ))
     )(input)
@@ -202,7 +200,7 @@ pub fn colon(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         tuple((
             separator_whitespace,
-            nom::character::complete::char(':'),
+            tag(":"),
             separator_whitespace,
         ))
     )(input)
@@ -375,7 +373,7 @@ fn quotable_character(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn quoted_pair(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            nom::character::complete::char('\\'),
+            tag("\\"),
             quotable_character,
         )
     )(input)
@@ -400,13 +398,15 @@ fn quoted_text(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 pub fn quoted_string(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            separator_whitespace,
-            tag("\""),
-            many0(alt((quoted_text, quoted_pair))),
-            tag("\""),
-        ))
+    preceded(
+        separator_whitespace,
+        terminated(
+            preceded(
+                tag("\""),
+                alt((quoted_text, quoted_pair))
+            ),
+            tag("\"")
+        )
     )(input)
 }
 
@@ -484,7 +484,6 @@ const SCHEME_CHARS: &'static [u8] = b"+-.";
 pub fn is_scheme_char(i: u8) -> bool {
     is_alphanumeric(i) || SCHEME_CHARS.contains(&i)
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -12,7 +12,7 @@ use crate::{
 
 use nom::{
     multi::many0,
-    sequence::tuple,
+    sequence::{ tuple, preceded, },
     combinator::{ opt, recognize },
 };
 
@@ -21,8 +21,7 @@ pub fn response(input: &[u8]) -> Result<&[u8], Message> {
         tuple((
             status::status_line,
             many0(headers::message_header),
-            newline,
-            opt(message_body),
+            preceded(newline, opt(message_body)),
         ))
     )(input)?;
 
@@ -50,7 +49,7 @@ mod status {
 
     use nom::{
         combinator::recognize,
-        sequence:: tuple ,
+        sequence::{ tuple, terminated, preceded, },
         branch::alt,
         character::{ is_space, is_digit },
         bytes::complete::{
@@ -136,14 +135,14 @@ mod status {
 
     pub fn status_line(input: &[u8]) -> Result<&[u8], &[u8]> {
         recognize(
-            tuple((
-                sip_version,
-                tag(" "),
-                status_code,
-                tag(" "),
-                take_while(is_reason_phrase),
+            terminated(
+                tuple((
+                    sip_version,
+                    preceded(tag(" "), status_code),
+                    preceded(tag(" "), take_while(is_reason_phrase)),
+                )),
                 newline,
-            ))
+            )
         )(input)
     }
 }

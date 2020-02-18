@@ -1,5 +1,13 @@
 use crate::{
-    message::{ Method, Version, GenericParam, },
+    message::{
+        Method,
+        Version,
+        GenericParam,
+        URIParam,
+        Transport,
+        User,
+        URIHeader,
+    },
     parser::{
         integer,
         Error,
@@ -11,12 +19,12 @@ use crate::{
 };
 
 use nom::{
-    combinator::{ opt, recognize, },
-    sequence::{ pair, tuple },
+    combinator::{ opt, recognize, rest },
+    sequence::{ pair, tuple, preceded, separated_pair, },
     branch::alt,
-    multi::{ many0, many1, many_m_n, },
+    multi::{ many0, many1, many_m_n, separated_list, separated_nonempty_list, },
     character::{ is_digit, is_hex_digit },
-    character::complete::{ digit1, alpha1 },
+    character::complete::alpha1,
     bytes::complete::{
         tag,
         tag_no_case,
@@ -27,7 +35,7 @@ use nom::{
 };
 
 pub fn message_body(input: &[u8]) -> Result<&[u8], &[u8]> {
-    take_while(|_| true)(input)
+    rest(input)
 }
 
 fn user_info(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -37,34 +45,34 @@ fn user_info(input: &[u8]) -> Result<&[u8], &[u8]> {
                 tokens::user,
                 telephone_subscriber,
             )),
-            opt(pair(tag(":"), tokens::password)),
+            opt(preceded(tag(":"), tokens::password)),
             tag("@"),
         ))
     )(input)
 }
 
 pub fn sip_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+    recognize(preceded(
+        tag_no_case("sip:"),
         tuple((
-            tag_no_case("sip:"),
             opt(user_info),
             host_port,
             uri_parameters,
-            opt(headers)
+            headers,
         ))
-    )(input)
+    ))(input)
 }
 
 pub fn sips_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+    recognize(preceded(
+        tag_no_case("sips:"),
         tuple((
-            tag_no_case("sips:"),
             opt(user_info),
             host_port,
             uri_parameters,
-            opt(headers)
+            headers,
         ))
-    )(input)
+    ))(input)
 }
 
 fn top_label(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -127,8 +135,8 @@ pub fn ipv4_address(input: &[u8]) -> Result<&[u8], &[u8]> {
     )))(input)
 }
 
-pub fn port(input: &[u8]) -> Result<&[u8], &[u8]> {
-    digit1(input)
+pub fn port(input: &[u8]) -> Result<&[u8], i32> {
+    integer(input)
 }
 
 fn hex4(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -181,63 +189,107 @@ pub fn host(input: &[u8]) -> Result<&[u8], &[u8]> {
     ))(input)
 }
 
-pub fn host_port(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            host,
-            opt(pair(tag(":"), port)),
-        )
+pub fn host_port(input: &[u8]) -> Result<&[u8], (&[u8], Option<i32>)> {
+    pair(
+        host,
+        opt(preceded(tag(":"), port)),
     )(input)
 }
 
-pub fn transport(input: &[u8]) -> Result<&[u8], &[u8]> {
+pub fn transport_udp(input: &[u8]) -> Result<&[u8], Transport> {
+    let (input, _) = tag_no_case("udp")(input)?;
+
+    Ok((input, Transport::UDP))
+}
+
+pub fn transport_tcp(input: &[u8]) -> Result<&[u8], Transport> {
+    let (input, _) = tag_no_case("tcp")(input)?;
+
+    Ok((input, Transport::TCP))
+}
+
+pub fn transport_sctp(input: &[u8]) -> Result<&[u8], Transport> {
+    let (input, _) = tag_no_case("sctp")(input)?;
+
+    Ok((input, Transport::SCTP))
+}
+
+pub fn transport_tls(input: &[u8]) -> Result<&[u8], Transport> {
+    let (input, _) = tag_no_case("TLS")(input)?;
+
+    Ok((input, Transport::TLS))
+}
+
+pub fn transport_extension(input: &[u8]) -> Result<&[u8], Transport> {
+    let (input, value) = tokens::token(input)?;
+
+    Ok((input, Transport::Extension(value)))
+}
+
+pub fn transport(input: &[u8]) -> Result<&[u8], Transport> {
     alt((
-        tag_no_case("udp"),
-        tag_no_case("tcp"),
-        tag_no_case("sctp"),
-        tag_no_case("tls"),
-        tokens::token,
+        transport_udp,
+        transport_tcp,
+        transport_sctp,
+        transport_tls,
+        transport_extension,
     ))(input)
 }
 
-fn transport_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            tag_no_case("transport="),
-            transport,
-        )
-    )(input)
+fn uri_parameter_transport(input: &[u8]) -> Result<&[u8], URIParam> {
+    let (input, transport) = preceded(
+        tag_no_case("transport="),
+        transport
+    )(input)?;
+
+    Ok((input, URIParam::Transport(transport)))
 }
 
-fn user_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            tag_no_case("user="),
-            alt((
-                tag_no_case("phone"),
-                tag_no_case("ip"),
-                tokens::token,
-            ))
-        )
-    )(input)
+fn user_phone(input: &[u8]) -> Result<&[u8], User> {
+    let (input, _) = tag_no_case("phone")(input)?;
+
+    Ok((input, User::Phone))
 }
 
-fn method_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            tag_no_case("method="),
-            method,
-        )
-    )(input)
+fn user_ip(input: &[u8]) -> Result<&[u8], User> {
+    let (input, _) = tag_no_case("ip")(input)?;
+
+    Ok((input, User::IP))
 }
 
-fn ttl_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            tag_no_case("ttl="),
-            ttl,
-        )
-    )(input)
+fn user_extension(input: &[u8]) -> Result<&[u8], User> {
+    let (input, value) = tokens::token(input)?;
+
+    Ok((input, User::Other(value)))
+}
+
+fn user(input: &[u8]) -> Result<&[u8], User> {
+    alt((
+        user_phone,
+        user_ip,
+        user_extension,
+    ))(input)
+}
+
+fn uri_parameter_user(input: &[u8]) -> Result<&[u8], URIParam> {
+    let (input, user) = preceded(
+        tag_no_case("user="),
+        user
+    )(input)?;
+
+    Ok((input, URIParam::User(user)))
+}
+
+fn uri_parameter_method(input: &[u8]) -> Result<&[u8], URIParam> {
+    let (input, method) = preceded(tag_no_case("method="), method)(input)?;
+
+    Ok((input, URIParam::Method(method)))
+}
+
+fn uri_parameter_ttl(input: &[u8]) -> Result<&[u8], URIParam> {
+    let (input, ttl) = preceded(tag_no_case("ttl="), ttl)(input)?;
+
+    Ok((input, URIParam::TTL(ttl)))
 }
 
 pub fn ttl(input: &[u8]) -> Result<&[u8], i32> {
@@ -253,69 +305,70 @@ pub fn ttl(input: &[u8]) -> Result<&[u8], i32> {
     }
 }
 
-fn maddr_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            tag_no_case("maddr="),
-            host,
-        )
-    )(input)
+fn uri_parameter_maddr(input: &[u8]) -> Result<&[u8], URIParam> {
+    let (input, maddr) = preceded(tag_no_case("maddr="), host)(input)?;
+
+    Ok((input, URIParam::MAddr(maddr)))
 }
 
-fn lr_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    tag_no_case("lr")(input)
+fn uri_parameter_lr(input: &[u8]) -> Result<&[u8], URIParam> {
+    let (input, _) = tag_no_case("lr")(input)?;
+
+    Ok((input, URIParam::LR))
 }
 
-fn other_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            take_while1(tokens::is_param_char),
-            opt(
-                pair(
-                    tag("="),
-                    take_while1(tokens::is_param_char),
-                )
+fn uri_parameter_other(input: &[u8]) -> Result<&[u8], URIParam> {
+    let (input, (name, value)) = pair(
+        take_while1(tokens::is_param_char),
+        opt(
+            preceded(
+                tag("="),
+                take_while1(tokens::is_param_char),
             )
         )
-    )(input)
+    )(input)?;
+
+    Ok((input, URIParam::Other(name, value)))
 }
 
-fn uri_parameters(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        many0(
-            pair(
-                tag(";"),
-                alt((
-                    transport_param,
-                    user_param,
-                    method_param,
-                    ttl_param,
-                    maddr_param,
-                    lr_param,
-                    other_param,
-                ))
-            )
+fn uri_parameter(input: &[u8]) -> Result<&[u8], URIParam> {
+    alt((
+        uri_parameter_transport,
+        uri_parameter_user,
+        uri_parameter_method,
+        uri_parameter_ttl,
+        uri_parameter_maddr,
+        uri_parameter_lr,
+        uri_parameter_other,
+    ))(input)
+}
+
+fn uri_parameters(input: &[u8]) -> Result<&[u8], Vec<URIParam>> {
+    many0(
+        preceded(
+            tag(";"),
+            uri_parameter
         )
     )(input)
 }
 
-fn header(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            take_while1(tokens::is_header_char),
-            tag("="),
-            take_while(tokens::is_header_char),
-        ))
-    )(input)
+fn header(input: &[u8]) -> Result<&[u8], URIHeader> {
+    let (input, (name, value)) = separated_pair(
+        take_while1(tokens::is_header_char),
+        tag("="),
+        take_while(tokens::is_header_char)
+    )(input)?;
+
+    Ok((input, URIHeader {
+        name,
+        value,
+    }))
 }
 
-fn headers(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            tag("?"),
-            header,
-            many0(pair(tag("&"), header))
-        ))
+fn headers(input: &[u8]) -> Result<&[u8], Vec<URIHeader>> {
+    preceded(
+        tag("?"),
+        separated_list(tag("&"), header)
     )(input)
 }
 
@@ -376,13 +429,13 @@ pub fn method(input: &[u8]) -> Result<&[u8], Method> {
 pub fn sip_version(input: &[u8]) -> Result<&[u8], Version> {
     let (input, (_, major, _, minor)) = tuple((
         tag_no_case("SIP/"),
-        digit1,
+        integer,
         tag("."),
-        digit1,
+        integer,
     ))(input)?;
 
     let version = match (major, minor) {
-        (b"2", b"0") => Version::Two,
+        (2, 0) => Version::Two,
         (major, minor) => Version::Other(major, minor)
     };
 
@@ -420,21 +473,17 @@ fn scheme(input: &[u8]) -> Result<&[u8], &[u8]> {
     )(input)
 }
 
-fn segment(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            tokens::param,
-            many0(pair(tag(";"), tokens::param))
-        )
+fn segment(input: &[u8]) -> Result<&[u8], Vec<&[u8]>> {
+    separated_nonempty_list(
+        tag(";"),
+        tokens::param
     )(input)
 }
 
-fn path_segments(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        pair(
-            segment,
-            many0(pair(tag("/"), segment))
-        )
+fn path_segments(input: &[u8]) -> Result<&[u8], Vec<Vec<&[u8]>>> {
+    separated_nonempty_list(
+        tag("/"),
+        segment
     )(input)
 }
 
@@ -476,13 +525,11 @@ fn hier_part(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 pub fn absolute_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-            scheme,
-            tag(":"),
-            alt((hier_part, opaque_part))
-        ))
-    )(input)
+    recognize(separated_pair(
+        scheme,
+        tag(":"),
+        alt((hier_part, opaque_part))
+    ))(input)
 }
 
 fn gen_value(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -496,33 +543,23 @@ fn gen_value(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn generic_param(input: &[u8]) -> Result<&[u8], GenericParam> {
     let (input, (name, value)) = pair(
         tokens::token,
-        opt(pair(tokens::equal, gen_value))
+        opt(preceded(tokens::equal, gen_value))
     )(input)?;
 
-    let param = match value {
-        Some((_, value)) => GenericParam {
-            name,
-            value: Some(value),
-        },
-        _ => GenericParam {
-            name,
-            value: None,
-        }
-    };
-
-    Ok((input, param))
+    Ok((input, GenericParam {
+        name,
+        value,
+    }))
 }
 
 pub fn generic_params(input: &[u8]) -> Result<&[u8], Vec<GenericParam>> {
-    let (input, params) = many0(pair(tokens::semicolon, generic_param))(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
+    let (input, params) = many0(preceded(tokens::semicolon, generic_param))(input)?;
 
     Ok((input, params))
 }
 
 pub fn option_tag(input: &[u8]) -> Result<&[u8], Vec<&[u8]>> {
-    let (input, options) = many0(pair(tokens::comma, tokens::token))(input)?;
-    let options = options.into_iter().map(|(_, option)| option).collect();
+    let (input, options) = many0(preceded(tokens::comma, tokens::token))(input)?;
 
     Ok((input, options))
 }
@@ -610,13 +647,14 @@ mod tests {
 
     #[test]
     fn port_needs_one_digit() {
-        assert!(port(b"1") == Ok((b"", b"1")));
+        assert!(port(b"1") == Ok((b"", 1)));
         assert_eq!(port(b"").is_err(), true);
     }
 
     #[test]
-    fn port_wants_all_the_digits() {
-        assert!(port(b"1111111111111111111111111111111111") == Ok((b"", b"1111111111111111111111111111111111")));
+    fn port_only_handles_reasonable_values() {
+        assert!(port(b"2147483647") == Ok((b"", 2_147_483_647)));
+        assert!(port(b"2147483648").is_err());
     }
 
     #[test]
@@ -648,7 +686,25 @@ mod tests {
 
     #[test]
     fn host_port_takes_a_host_and_an_optional_port() {
-        assert!(host_port(b"[::1]") == Ok((b"", b"[::1]")));
-        assert!(host_port(b"[::1]:12345") == Ok((b"", b"[::1]:12345")));
+        assert!(host_port(b"[::1]") == Ok((b"", (b"[::1]", None))));
+        assert!(host_port(b"[::1]:12345") == Ok((b"", (b"[::1]", Some(12345)))));
+    }
+
+    #[test]
+    fn uri_parameters_should_parse_no_params() {
+        assert!(uri_parameters(b"") == Ok((b"", vec![])));
+        assert!(uri_parameters(b"transport=udp") == Ok((b"transport=udp", vec![])));
+    }
+
+    #[test]
+    fn uri_parameters_should_parse_one_param() {
+        let (_, params) = uri_parameters(b";transport=udp").unwrap();
+        assert_eq!(params.len(), 1);
+    }
+
+    #[test]
+    fn uri_parameters_should_parse_leading_semi() {
+        let (_, params) = uri_parameters(b";transport=udp").unwrap();
+        assert_eq!(params.len(), 1);
     }
 }

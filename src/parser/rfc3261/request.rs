@@ -1,5 +1,5 @@
 use crate::{
-    message::{ Message, Request, RequestLine },
+    message::{ Message, Request, RequestLine, },
     parser::{
         Result,
         rfc3261::{
@@ -12,7 +12,7 @@ use crate::{
 
 use nom::{
     combinator::opt,
-    sequence::tuple,
+    sequence::{ tuple, preceded, terminated },
     branch::alt,
     multi::many0,
     bytes::complete::tag,
@@ -27,14 +27,14 @@ fn request_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 fn request_line(input: &[u8]) -> Result<&[u8], RequestLine> {
-    let (input, (method, _, uri, _, version, _)) = tuple((
-        common::method,
-        tag(" "),
-        request_uri,
-        tag(" "),
-        common::sip_version,
+    let (input, (method, uri, version)) = terminated(
+        tuple((
+            common::method,
+            preceded(tag(" "), request_uri),
+            preceded(tag(" "), common::sip_version),
+        )),
         tokens::newline,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, RequestLine {
         method,
@@ -44,11 +44,10 @@ fn request_line(input: &[u8]) -> Result<&[u8], RequestLine> {
 }
 
 pub fn request(input: &[u8]) -> Result<&[u8], Message> {
-    let (input, (request_line, headers, _, body)) = tuple((
+    let (input, (request_line, headers, body)) = tuple((
             request_line,
             many0(headers::message_header),
-            tokens::newline,
-            opt(common::message_body),
+            preceded(tokens::newline, opt(common::message_body)),
         ))(input)?;
 
     Ok((input, Message::Request(Request {

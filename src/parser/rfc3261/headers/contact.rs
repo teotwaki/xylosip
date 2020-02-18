@@ -33,7 +33,6 @@ use crate::{
                 generic_param,
                 generic_params,
                 sip_uri,
-                sips_uri,
                 qvalue,
             },
         },
@@ -92,7 +91,6 @@ fn display_name(input: &[u8]) -> Result<&[u8], &[u8]> {
 fn addr_spec(input: &[u8]) -> Result<&[u8], (Option<&[u8]>, &[u8])> {
     let (input, addr) = alt((
         sip_uri,
-        sips_uri,
         absolute_uri,
     ))(input)?;
 
