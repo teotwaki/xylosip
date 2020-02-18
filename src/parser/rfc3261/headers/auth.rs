@@ -35,8 +35,8 @@ use crate::{
 
 use nom::{
     combinator::recognize,
-    sequence::{ pair, tuple },
-    multi::many0,
+    sequence::{ pair, tuple, preceded, terminated },
+    multi::separated_nonempty_list,
     branch::alt,
     bytes::complete::{
         tag,
@@ -291,29 +291,24 @@ fn algorithm(input: &[u8]) -> Result<&[u8], AlgorithmKind> {
 }
 
 fn credentials_digest_response(input: &[u8]) -> Result<&[u8], Credentials> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Digest"),
-        linear_whitespace,
-        dig_resp,
-        many0(pair(comma, dig_resp)),
-    ))(input)?;
-    let mut others: Vec<DigestResponseParam> = others.into_iter().map(|(_, resp)| resp).collect();
-    others.insert(0, first);
+    let (input, params) = preceded(
+        pair(
+            tag_no_case("Digest"),
+            linear_whitespace,
+        ),
+        separated_nonempty_list(comma, dig_resp)
+    )(input)?;
 
-    Ok((input, Credentials::DigestResponse(others)))
+    Ok((input, Credentials::DigestResponse(params)))
 }
 
 fn credentials_other_response(input: &[u8]) -> Result<&[u8], Credentials> {
-    let (input, (name, _, first, others)) = tuple((
-        token,
-        linear_whitespace,
-        auth_param,
-        many0(pair(comma, auth_param))
-    ))(input)?;
-    let mut others: Vec<(&[u8], &[u8])> = others.into_iter().map(|(_, param)| param).collect();
-    others.insert(0, first);
+    let (input, (name, params)) = pair(
+        terminated(token, linear_whitespace),
+        separated_nonempty_list(comma, auth_param)
+    )(input)?;
 
-    Ok((input, Credentials::OtherResponse(name, others)))
+    Ok((input, Credentials::OtherResponse(name, params)))
 }
 
 fn credentials(input: &[u8]) -> Result<&[u8], Credentials> {
@@ -324,41 +319,43 @@ fn credentials(input: &[u8]) -> Result<&[u8], Credentials> {
 }
 
 pub fn authorization(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, credentials)) = tuple((
-        tag_no_case("Authorization"),
-        header_colon,
+    let (input, credentials) = preceded(
+        pair(
+            tag_no_case("Authorization"),
+            header_colon
+        ),
         credentials,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::Authorization(credentials)))
 }
 
 fn response_digest(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
-        tuple((
-            left_double_quote,
-            take_while(is_lowercase_hexadecimal),
-            right_double_quote,
-        ))
+        preceded(left_double_quote, terminated(take_while(is_lowercase_hexadecimal), right_double_quote))
     )(input)
 }
 
 fn ainfo_response_auth(input: &[u8]) -> Result<&[u8], AuthenticationInfo> {
-    let (input, (_, _, auth)) = tuple((
-        tag_no_case("rspauth"),
-        equal,
+    let (input, auth) = preceded(
+        pair(
+            tag_no_case("rspauth"),
+            equal
+        ),
         response_digest,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, AuthenticationInfo::ResponseAuth(auth)))
 }
 
 fn ainfo_nextnonce(input: &[u8]) -> Result<&[u8], AuthenticationInfo> {
-    let (input, (_, _, nextnonce)) = tuple((
-        tag_no_case("nextnonce"),
-        equal,
+    let (input, nextnonce) = preceded(
+        pair(
+            tag_no_case("nextnonce"),
+            equal
+        ),
         quoted_string,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, AuthenticationInfo::NextNonce(nextnonce)))
 }
@@ -392,31 +389,33 @@ fn ainfo(input: &[u8]) -> Result<&[u8], AuthenticationInfo> {
 }
 
 pub fn authentication_info(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Authentication-Info"),
-        header_colon,
-        ainfo,
-        many0(pair(comma, ainfo)),
-    ))(input)?;
-    let mut others: Vec<AuthenticationInfo> = others.into_iter().map(|(_, info)| info).collect();
-    others.insert(0, first);
+    let (input, infos) = preceded(
+        pair(
+            tag_no_case("Authentication-Info"),
+            header_colon
+        ),
+        separated_nonempty_list(comma, ainfo)
+    )(input)?;
 
-    Ok((input, Header::AuthenticationInfo(others)))
+    Ok((input, Header::AuthenticationInfo(infos)))
 }
 
 fn qop_options(input: &[u8]) -> Result<&[u8], Vec<QOPValue>> {
-    let (input, (_, _, _, first, others, _)) = tuple((
-        tag_no_case("qop"),
-        equal,
-        left_double_quote,
-        qop_value,
-        many0(pair(tag(","), qop_value)),
-        right_double_quote,
-    ))(input)?;
-    let mut others: Vec<QOPValue> = others.into_iter().map(|(_, value)| value).collect();
-    others.insert(0, first);
+    let (input, values) = preceded(
+        pair(
+            tag_no_case("qop"),
+            equal
+        ),
+        preceded(
+            left_double_quote,
+            terminated(
+                separated_nonempty_list(tag(","), qop_value),
+                right_double_quote
+            )
+        )
+    )(input)?;
 
-    Ok((input, others))
+    Ok((input, values))
 }
 
 fn boolean_true(input: &[u8]) -> Result<&[u8], bool> {
@@ -439,28 +438,33 @@ fn boolean(input: &[u8]) -> Result<&[u8], bool> {
 }
 
 fn stale(input: &[u8]) -> Result<&[u8], bool> {
-    let (input, (_, _, value)) = tuple((
-        tag_no_case("stale"),
-        equal,
+    let (input, value) = preceded(
+        pair(
+            tag_no_case("stale"),
+            equal
+        ),
         boolean
-    ))(input)?;
+    )(input)?;
 
     Ok((input, value))
 }
 
 fn domain(input: &[u8]) -> Result<&[u8], Vec<&[u8]>> {
-    let (input, (_, _, _, first, others, _)) = tuple((
-        tag_no_case("domain"),
-        equal,
-        left_double_quote,
-        alt((absolute_uri, abs_path)),
-        many0(pair(take_while1(is_space), alt((absolute_uri, abs_path)))),
-        right_double_quote,
-    ))(input)?;
-    let mut others: Vec<&[u8]> = others.into_iter().map(|(_, uri)| uri).collect();
-    others.insert(0, first);
+    let (input, domains) = preceded(
+        tuple((
+            tag_no_case("domain"),
+            equal,
+            left_double_quote,
+        )),
+        terminated(
+            separated_nonempty_list(
+                take_while1(is_space), alt((absolute_uri, abs_path))
+            ),
+            right_double_quote
+        ),
+    )(input)?;
 
-    Ok((input, others))
+    Ok((input, domains))
 }
 
 fn digest_cln_realm(input: &[u8]) -> Result<&[u8], DigestParam> {
@@ -526,29 +530,24 @@ fn digest_cln(input: &[u8]) -> Result<&[u8], DigestParam> {
 }
 
 fn challenge_other(input: &[u8]) -> Result<&[u8], Challenge> {
-    let (input, (name, _, first, others)) = tuple((
-        token,
-        linear_whitespace,
-        auth_param,
-        many0(pair(comma, auth_param))
-    ))(input)?;
-    let mut others: Vec<(&[u8], &[u8])> = others.into_iter().map(|(_, param)| param).collect();
-    others.insert(0, first);
+    let (input, (name, params)) = pair(
+        terminated(token, linear_whitespace),
+        separated_nonempty_list(comma, auth_param)
+    )(input)?;
 
-    Ok((input, Challenge::Other(name, others)))
+    Ok((input, Challenge::Other(name, params)))
 }
 
 fn challenge_digest(input: &[u8]) -> Result<&[u8], Challenge> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Digest"),
-        linear_whitespace,
-        digest_cln,
-        many0(pair(comma, digest_cln))
-    ))(input)?;
-    let mut others: Vec<DigestParam> = others.into_iter().map(|(_, cln)| cln).collect();
-    others.insert(0, first);
+    let (input, digest_clns) = preceded(
+        pair(
+            tag_no_case("Digest"),
+            linear_whitespace
+        ),
+        separated_nonempty_list(comma, digest_cln)
+    )(input)?;
 
-    Ok((input, Challenge::Digest(others)))
+    Ok((input, Challenge::Digest(digest_clns)))
 }
 
 fn challenge(input: &[u8]) -> Result<&[u8], Challenge> {
@@ -559,44 +558,49 @@ fn challenge(input: &[u8]) -> Result<&[u8], Challenge> {
 }
 
 pub fn proxy_authenticate(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, challenge)) = tuple((
-        tag_no_case("Proxy-Authenticate"),
-        header_colon,
+    let (input, challenge) = preceded(
+        pair(
+            tag_no_case("Proxy-Authenticate"),
+            header_colon
+        ),
         challenge,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::ProxyAuthenticate(challenge)))
 }
 
 pub fn proxy_authorization(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, credentials)) = tuple((
-        tag_no_case("Proxy-Authorization"),
-        header_colon,
+    let (input, credentials) = preceded(
+        pair(
+            tag_no_case("Proxy-Authorization"),
+            header_colon
+        ),
         credentials,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::ProxyAuthorization(credentials)))
 }
 
 pub fn proxy_require(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Proxy-Require"),
-        header_colon,
-        token,
-        many0(pair(comma, token))
-    ))(input)?;
-    let mut others: Vec<&[u8]> = others.into_iter().map(|(_, option)| option).collect();
-    others.insert(0, first);
+    let (input, requires) = preceded(
+        pair(
+            tag_no_case("Proxy-Require"),
+            header_colon
+        ),
+        separated_nonempty_list(comma, token)
+    )(input)?;
 
-    Ok((input, Header::ProxyRequire(others)))
+    Ok((input, Header::ProxyRequire(requires)))
 }
 
 pub fn www_authenticate(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, challenge)) = tuple((
-        tag_no_case("WWW-Authenticate"),
-        header_colon,
+    let (input, challenge) = preceded(
+        pair(
+            tag_no_case("WWW-Authenticate"),
+            header_colon
+        ),
         challenge,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::WWWAuthenticate(challenge)))
 }

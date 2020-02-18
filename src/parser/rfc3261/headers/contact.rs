@@ -41,28 +41,32 @@ use crate::{
 
 use nom::{
     combinator::{ opt, recognize },
-    sequence::{ pair, tuple },
-    multi::many0,
+    sequence::{ pair, preceded, terminated },
+    multi::{ many0, many1, separated_nonempty_list, },
     branch::alt,
     bytes::complete::tag_no_case,
 };
 
 fn contact_params_expires(input: &[u8]) -> Result<&[u8], ContactParam> {
-    let (input, (_, _, expires)) = tuple((
-        tag_no_case("expires"),
-        equal,
+    let (input, expires) = preceded(
+        pair(
+            tag_no_case("expires"),
+            equal
+        ),
         integer,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, ContactParam::Expires(expires)))
 }
 
 fn contact_params_q(input: &[u8]) -> Result<&[u8], ContactParam> {
-    let (input, (_, _, q)) = tuple((
-        tag_no_case("q"),
-        equal,
+    let (input, q) = preceded(
+        pair(
+            tag_no_case("q"),
+            equal,
+        ),
         qvalue,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, ContactParam::Q(q)))
 }
@@ -83,7 +87,7 @@ fn contact_params(input: &[u8]) -> Result<&[u8], ContactParam> {
 
 fn display_name(input: &[u8]) -> Result<&[u8], &[u8]> {
     alt((
-        recognize(many0(pair(token, linear_whitespace))),
+        recognize(many1(pair(token, linear_whitespace))),
         quoted_string
     ))(input)
 }
@@ -98,12 +102,10 @@ fn addr_spec(input: &[u8]) -> Result<&[u8], (Option<&[u8]>, &[u8])> {
 }
 
 fn name_addr(input: &[u8]) -> Result<&[u8], (Option<&[u8]>, &[u8])> {
-    let (input, (dn, _, (_, addr), _)) = tuple((
+    let (input, (dn, (_, addr))) = pair(
         opt(display_name),
-        left_angle_quote,
-        addr_spec,
-        right_angle_quote,
-    ))(input)?;
+        preceded(left_angle_quote, terminated(addr_spec, right_angle_quote))
+    )(input)?;
 
     Ok((input, (dn, addr)))
 }
@@ -111,9 +113,8 @@ fn name_addr(input: &[u8]) -> Result<&[u8], (Option<&[u8]>, &[u8])> {
 fn contact_param(input: &[u8]) -> Result<&[u8], Contact> {
     let (input, ((name, addr), params)) = pair(
         alt((name_addr, addr_spec)),
-        many0(pair(semicolon, contact_params))
+        many0(preceded(semicolon, contact_params))
     )(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
 
     Ok((input, Contact {
         name,
@@ -129,38 +130,37 @@ fn contact_star(input: &[u8]) -> Result<&[u8], ContactValue> {
 }
 
 fn contact_specific(input: &[u8]) -> Result<&[u8], ContactValue> {
-    let (input, (first, others)) = pair(
-        contact_param,
-        many0(pair(comma, contact_param)),
-    )(input)?;
-    let mut others: Vec<Contact> = others.into_iter().map(|(_, param)| param).collect();
-    others.insert(0, first);
+    let (input, params) = separated_nonempty_list(comma, contact_param)(input)?;
 
-    Ok((input, ContactValue::Specific(others)))
+    Ok((input, ContactValue::Specific(params)))
 }
 
 pub fn contact(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, value)) = tuple((
-        alt((
-            tag_no_case("Contact"),
-            tag_no_case("m"),
-        )),
-        header_colon,
+    let (input, value) = preceded(
+        pair(
+            alt((
+                tag_no_case("Contact"),
+                tag_no_case("m"),
+            )),
+            header_colon,
+        ),
         alt((
             contact_star,
             contact_specific,
         ))
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::Contact(value)))
 }
 
 fn tag_param(input: &[u8]) -> Result<&[u8], &[u8]> {
-    let (input, (_, _, tag)) = tuple((
-        tag_no_case("tag"),
-        equal,
+    let (input, tag) = preceded(
+        pair(
+            tag_no_case("tag"),
+            equal,
+        ),
         token,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, tag))
 }
@@ -180,9 +180,8 @@ fn from_param_extension(input: &[u8]) -> Result<&[u8], FromParam> {
 fn from_spec(input: &[u8]) -> Result<&[u8], From> {
     let (input, ((name, addr), params)) = pair(
         alt((name_addr, addr_spec)),
-        many0(pair(semicolon, alt((from_param_tag, from_param_extension))))
+        many0(preceded(semicolon, alt((from_param_tag, from_param_extension))))
     )(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
 
     Ok((input, From {
         name,
@@ -192,11 +191,13 @@ fn from_spec(input: &[u8]) -> Result<&[u8], From> {
 }
 
 pub fn from(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, from)) = tuple((
-        alt((tag_no_case("From"), tag_no_case("f"))),
-        header_colon,
+    let (input, from) = preceded(
+        pair(
+            alt((tag_no_case("From"), tag_no_case("f"))),
+            header_colon,
+        ),
         from_spec
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::From(from)))
 }
@@ -215,16 +216,15 @@ fn rec_route(input: &[u8]) -> Result<&[u8], RecordRoute> {
 }
 
 pub fn record_route(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Record-Route"),
-        header_colon,
-        rec_route,
-        many0(pair(comma, rec_route))
-    ))(input)?;
-    let mut others: Vec<RecordRoute> = others.into_iter().map(|(_, route)| route).collect();
-    others.insert(0, first);
+    let (input, routes) = preceded(
+        pair(
+            tag_no_case("Record-Route"),
+            header_colon,
+        ),
+        separated_nonempty_list(comma, rec_route)
+    )(input)?;
 
-    Ok((input, Header::RecordRoute(others)))
+    Ok((input, Header::RecordRoute(routes)))
 }
 
 fn rplyto_spec(input: &[u8]) -> Result<&[u8], ReplyTo> {
@@ -241,11 +241,13 @@ fn rplyto_spec(input: &[u8]) -> Result<&[u8], ReplyTo> {
 }
 
 pub fn reply_to(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, reply_to)) = tuple((
-        tag_no_case("Reply-To"),
-        header_colon,
+    let (input, reply_to) = preceded(
+        pair(
+            tag_no_case("Reply-To"),
+            header_colon,
+        ),
         rplyto_spec
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::ReplyTo(reply_to)))
 }
@@ -264,16 +266,15 @@ fn route_param(input: &[u8]) -> Result<&[u8], Route> {
 }
 
 pub fn route(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Route"),
-        header_colon,
-        route_param,
-        many0(pair(comma, route_param))
-    ))(input)?;
-    let mut others: Vec<Route> = others.into_iter().map(|(_, route)| route).collect();
-    others.insert(0, first);
+    let (input, params) = preceded(
+        pair(
+            tag_no_case("Route"),
+            header_colon,
+        ),
+        separated_nonempty_list(comma, route_param)
+    )(input)?;
 
-    Ok((input, Header::Route(others)))
+    Ok((input, Header::Route(params)))
 }
 
 fn to_param_tag(input: &[u8]) -> Result<&[u8], ToParam> {
@@ -296,17 +297,90 @@ fn to_param(input: &[u8]) -> Result<&[u8], ToParam> {
 }
 
 pub fn to(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, (name, addr), params)) = tuple((
-        alt((tag_no_case("To"), tag_no_case("t"))),
-        header_colon,
-        alt((name_addr, addr_spec)),
-        many0(pair(semicolon, to_param)),
-    ))(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
+    let (input, ((name, addr), params)) = preceded(
+        pair(
+            alt((tag_no_case("To"), tag_no_case("t"))),
+            header_colon,
+        ),
+        pair(
+            alt((name_addr, addr_spec)),
+            many0(preceded(semicolon, to_param))
+        )
+    )(input)?;
 
     Ok((input, Header::To(To {
         addr,
         name,
         params,
     })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::message::*;
+
+    #[test]
+    fn contact_params_expires_extracts_value() {
+        assert_eq!(contact_params_expires(b"expires=18").unwrap().1, ContactParam::Expires(18));
+    }
+
+    #[test]
+    fn contact_params_q_extracts_value() {
+        assert_eq!(contact_params_q(b"q=1.0").unwrap().1, ContactParam::Q(b"1.0"));
+    }
+
+    #[test]
+    fn contact_params_extension_extracts_value() {
+        assert_eq!(contact_params_extension(b"other").unwrap().1, ContactParam::Extension(GenericParam {
+            name: b"other",
+            value: None,
+        }));
+
+        assert_eq!(contact_params_extension(b"other=").unwrap().1, ContactParam::Extension(GenericParam {
+            name: b"other",
+            value: None,
+        }));
+
+        assert_eq!(contact_params_extension(b"other=value").unwrap().1, ContactParam::Extension(GenericParam {
+            name: b"other",
+            value: Some(b"value"),
+        }));
+    }
+
+    #[test]
+    fn name_addr_extracts_addr() {
+        assert!(name_addr(b"<sip:example.com>").unwrap().1 == (None, b"sip:example.com"));
+        assert!(name_addr(b"<sip:example.com:5060>").unwrap().1 == (None, b"sip:example.com:5060"));
+        assert!(name_addr(b"<sips:john@example.com>").unwrap().1 == (None, b"sips:john@example.com"));
+    }
+
+    #[test]
+    fn display_name_can_handle_quoted_and_unquoted_strings() {
+        assert!(display_name(b"John ").unwrap().1 == b"John ");
+        assert!(display_name(b"\"John\"").unwrap().1 == b"John");
+    }
+
+    #[test]
+    fn name_addr_extracts_addr_and_name() {
+        assert!(name_addr(b"John <sip:example.com>").unwrap().1 == (Some(b"John "), b"sip:example.com"));
+        assert!(name_addr(b"\"John Doe\" <sip:example.com>").unwrap().1 == (Some(b"John Doe"), b"sip:example.com"));
+    }
+
+    #[test]
+    fn contact_param_can_parse_full_contact() {
+        assert!(contact_param(b"\"John\" <sip:j@example.com>;expires=8;q=1.0").unwrap().1 == Contact {
+            addr: b"sip:j@example.com",
+            name: Some(b"John"),
+            params: vec![
+                ContactParam::Expires(8),
+                ContactParam::Q(b"1.0")
+            ]
+        })
+    }
+
+    #[test]
+    fn to_can_parse_whole_to_line() {
+        assert!(to(b"To: Bob <sip:bob@biloxi.example.com>").is_ok());
+    }
 }

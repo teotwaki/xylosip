@@ -161,8 +161,8 @@ fn right_parenthesis(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn right_angle_quote(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            tag(">"),
             separator_whitespace,
+            tag(">"),
         )
     )(input)
 }
@@ -170,8 +170,8 @@ pub fn right_angle_quote(input: &[u8]) -> Result<&[u8], &[u8]> {
 pub fn left_angle_quote(input: &[u8]) -> Result<&[u8], &[u8]> {
     recognize(
         pair(
-            tag("<"),
             separator_whitespace,
+            tag("<"),
         )
     )(input)
 }
@@ -403,7 +403,7 @@ pub fn quoted_string(input: &[u8]) -> Result<&[u8], &[u8]> {
         terminated(
             preceded(
                 tag("\""),
-                alt((quoted_text, quoted_pair))
+                recognize(many0(alt((quoted_text, quoted_pair))))
             ),
             tag("\"")
         )
@@ -550,5 +550,11 @@ mod tests {
     #[test]
     fn password_doesnt_match_special_chars() {
         assert!(password(b";@") == Ok((b";@", b"")));
+    }
+
+    #[test]
+
+    fn quoted_string_can_parse_quoted_strings() {
+        assert!(quoted_string(b"\"hi\"").unwrap().1 == b"hi");
     }
 }

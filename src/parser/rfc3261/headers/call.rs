@@ -23,8 +23,8 @@ use crate::{
 
 use nom::{
     combinator::{ opt, recognize },
-    sequence::{ pair, tuple },
-    multi::many0,
+    sequence::{ pair, preceded, terminated, },
+    multi::{ separated_list, separated_nonempty_list, },
     branch::alt,
     bytes::complete::{ tag, tag_no_case },
 };
@@ -39,14 +39,16 @@ fn callid(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 pub fn call_id(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, id)) = tuple((
-        alt((
-            tag_no_case("Call-ID"),
-            tag_no_case("i"),
-        )),
-        header_colon,
+    let (input, id) = preceded(
+        pair(
+            alt((
+                tag_no_case("Call-ID"),
+                tag_no_case("i"),
+            )),
+            header_colon,
+        ),
         callid
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::CallID(id)))
 }
@@ -76,16 +78,18 @@ fn info_param_purpose_other(input: &[u8]) -> Result<&[u8], InfoParamPurpose> {
 }
 
 fn info_param_purpose(input: &[u8]) -> Result<&[u8], InfoParam> {
-    let (input, (_, _, purpose)) = tuple((
-        tag_no_case("purpose"),
-        equal,
+    let (input, purpose) = preceded(
+        pair(
+            tag_no_case("purpose"),
+            equal
+        ),
         alt((
             info_param_purpose_icon,
             info_param_purpose_info,
             info_param_purpose_card,
             info_param_purpose_other,
         ))
-    ))(input)?;
+    )(input)?;
 
     Ok((input, InfoParam::Purpose(purpose)))
 }
@@ -104,13 +108,10 @@ fn info_param(input: &[u8]) -> Result<&[u8], InfoParam> {
 }
 
 fn info(input: &[u8]) -> Result<&[u8], Info> {
-    let (input, (_, uri, _, params)) = tuple((
-        left_angle_quote,
-        absolute_uri,
-        right_angle_quote,
-        many0(pair(semicolon, info_param))
-    ))(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
+    let (input, (uri, params)) = pair(
+        preceded(left_angle_quote, terminated(absolute_uri, right_angle_quote)),
+        separated_list(semicolon, info_param)
+    )(input)?;
 
     Ok((input, Info {
         uri,
@@ -119,29 +120,25 @@ fn info(input: &[u8]) -> Result<&[u8], Info> {
 }
 
 pub fn call_info(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Call-Info"),
-        header_colon,
-        info,
-        many0(pair(comma, info))
-    ))(input)?;
+    let (input, infos) = preceded(
+        pair(
+            tag_no_case("Call-Info"),
+            header_colon
+        ),
+        separated_nonempty_list(comma, info),
+    )(input)?;
 
-    let mut others: Vec<Info> = others.into_iter().map(|(_, info)| info).collect();
-    others.insert(0, first);
-
-    Ok((input, Header::CallInfo(others)))
+    Ok((input, Header::CallInfo(infos)))
 }
 
 pub fn in_reply_to(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("In-Reply-To"),
-        header_colon,
-        callid,
-        many0(pair(comma, callid))
-    ))(input)?;
+    let (input, callids) = preceded(
+        pair(
+            tag_no_case("In-Reply-To"),
+            header_colon,
+        ),
+        separated_nonempty_list(comma, callid)
+    )(input)?;
 
-    let mut others: Vec<&[u8]> = others.into_iter().map(|(_, callid)| callid).collect();
-    others.insert(0, first);
-
-    Ok((input, Header::InReplyTo(others)))
+    Ok((input, Header::InReplyTo(callids)))
 }
