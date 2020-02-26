@@ -6,7 +6,7 @@ pub enum Method<'a> {
     Bye,
     Cancel,
     Register,
-    Extension(&'a [u8])
+    Extension(&'a str)
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -21,14 +21,14 @@ pub enum Transport<'a> {
     TCP,
     SCTP,
     TLS,
-    Extension(&'a [u8]),
+    Extension(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum User<'a> {
     Phone,
     IP,
-    Other(&'a [u8]),
+    Other(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -37,38 +37,37 @@ pub enum URIParam<'a> {
     User(User<'a>),
     Method(Method<'a>),
     TTL(i32),
-    MAddr(&'a [u8]),
+    MAddr(&'a str),
     LR,
-    Other(&'a [u8], Option<&'a [u8]>),
+    Other(&'a str, Option<&'a str>),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct URIHeader<'a> {
-    pub name: &'a [u8],
-    pub value: &'a [u8],
+    pub name: &'a str,
+    pub value: &'a str,
 }
-
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct RequestLine<'a> {
     pub method: Method<'a>,
-    pub uri: &'a [u8],
+    pub uri: &'a str,
     pub version: Version,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum ViaParam<'a> {
     Ttl(i32),
-    MAddr(&'a [u8]),
-    Received(&'a [u8]),
-    Branch(&'a [u8]),
+    MAddr(&'a str),
+    Received(&'a str),
+    Branch(&'a str),
     Extension(GenericParam<'a>),
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Via<'a> {
-    pub protocol: &'a [u8],
-    pub sent_by: &'a [u8],
+    pub protocol: &'a str,
+    pub sent_by: &'a str,
     pub params: Vec<ViaParam<'a>>,
 }
 
@@ -77,7 +76,7 @@ pub enum InfoParamPurpose<'a> {
     Icon,
     Info,
     Card,
-    Other(&'a [u8]),
+    Other(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -88,7 +87,7 @@ pub enum InfoParam<'a> {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Info<'a> {
-    pub uri: &'a [u8],
+    pub uri: &'a str,
     pub params: Vec<InfoParam<'a>>,
 }
 
@@ -96,62 +95,62 @@ pub struct Info<'a> {
 pub enum AlgorithmKind<'a> {
     MD5,
     MD5Sess,
-    Extension(&'a [u8])
+    Extension(&'a str)
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum QOPValue<'a> {
     Auth,
     AuthInt,
-    Extension(&'a [u8])
+    Extension(&'a str)
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum DigestParam<'a> {
-    Realm(&'a [u8]),
-    Domain(Vec<&'a [u8]>),
-    Nonce(&'a [u8]),
-    Opaque(&'a [u8]),
+    Realm(&'a str),
+    Domain(Vec<&'a str>),
+    Nonce(&'a str),
+    Opaque(&'a str),
     Stale(bool),
     Algorithm(AlgorithmKind<'a>),
     QOPOptions(Vec<QOPValue<'a>>),
-    Extension(&'a [u8], &'a [u8]),
+    Extension(&'a str, &'a str),
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Challenge<'a> {
     Digest(Vec<DigestParam<'a>>),
-    Other(&'a [u8], Vec<(&'a [u8], &'a [u8])>)
+    Other(&'a str, Vec<(&'a str, &'a str)>)
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum DigestResponseParam<'a> {
-    Username(&'a [u8]),
-    Realm(&'a [u8]),
-    Nonce(&'a [u8]),
-    URI(&'a [u8]),
-    Response(&'a [u8]),
+    Username(&'a str),
+    Realm(&'a str),
+    Nonce(&'a str),
+    URI(&'a str),
+    Response(&'a str),
     Algorithm(AlgorithmKind<'a>),
-    CNonce(&'a [u8]),
-    Opaque(&'a [u8]),
+    CNonce(&'a str),
+    Opaque(&'a str),
     QOP(QOPValue<'a>),
-    NonceCount(&'a [u8]),
-    Extension(&'a [u8], &'a [u8]),
+    NonceCount(&'a str),
+    Extension(&'a str, &'a str),
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Credentials<'a> {
     DigestResponse(Vec<DigestResponseParam<'a>>),
-    OtherResponse(&'a [u8], Vec<(&'a [u8], &'a [u8])>)
+    OtherResponse(&'a str, Vec<(&'a str, &'a str)>)
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum AuthenticationInfo<'a> {
-    NextNonce(&'a [u8]),
+    NextNonce(&'a str),
     QOP(QOPValue<'a>),
-    ResponseAuth(&'a [u8]),
-    CNonce(&'a [u8]),
-    NonceCount(&'a [u8])
+    ResponseAuth(&'a str),
+    CNonce(&'a str),
+    NonceCount(&'a str)
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -160,73 +159,73 @@ pub enum Priority<'a> {
     Urgent,
     Normal,
     NonUrgent,
-    Extension(&'a [u8]),
+    Extension(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum ToParam<'a> {
-    Tag(&'a [u8]),
+    Tag(&'a str),
     Extension(GenericParam<'a>),
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct To<'a> {
-    pub addr: &'a [u8],
-    pub name: Option<&'a [u8]>,
+    pub addr: &'a str,
+    pub name: Option<&'a str>,
     pub params: Vec<ToParam<'a>>,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct GenericParam<'a> {
-    pub name: &'a [u8],
-    pub value: Option<&'a [u8]>,
+    pub name: &'a str,
+    pub value: Option<&'a str>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Route<'a> {
-    pub addr: &'a [u8],
-    pub name: Option<&'a [u8]>,
+    pub addr: &'a str,
+    pub name: Option<&'a str>,
     pub params: Vec<GenericParam<'a>>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct ReplyTo<'a> {
-    pub addr: &'a [u8],
-    pub name: Option<&'a [u8]>,
+    pub addr: &'a str,
+    pub name: Option<&'a str>,
     pub params: Vec<GenericParam<'a>>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct RecordRoute<'a> {
-    pub addr: &'a [u8],
-    pub name: Option<&'a [u8]>,
+    pub addr: &'a str,
+    pub name: Option<&'a str>,
     pub params: Vec<GenericParam<'a>>,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum FromParam<'a> {
-    Tag(&'a [u8]),
+    Tag(&'a str),
     Extension(GenericParam<'a>),
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct From<'a> {
-    pub addr: &'a [u8],
-    pub name: Option<&'a [u8]>,
+    pub addr: &'a str,
+    pub name: Option<&'a str>,
     pub params: Vec<FromParam<'a>>,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum ContactParam<'a> {
-    Q(&'a [u8]),
+    Q(&'a str),
     Expires(i32),
     Extension(GenericParam<'a>),
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Contact<'a> {
-    pub addr: &'a [u8],
-    pub name: Option<&'a [u8]>,
+    pub addr: &'a str,
+    pub name: Option<&'a str>,
     pub params: Vec<ContactParam<'a>>,
 }
 
@@ -238,35 +237,35 @@ pub enum ContactValue<'a> {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct AlertInfo<'a> {
-    pub uri: &'a [u8],
+    pub uri: &'a str,
     pub params: Vec<GenericParam<'a>>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct ErrorInfo<'a> {
-    pub uri: &'a [u8],
+    pub uri: &'a str,
     pub params: Vec<GenericParam<'a>>,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum WarningAgent<'a> {
-    HostPort(&'a [u8], Option<i32>),
-    Pseudonym(&'a [u8]),
+    HostPort(&'a str, Option<i32>),
+    Pseudonym(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct Warning<'a> {
-    pub code: &'a [u8],
+    pub code: &'a str,
     pub agent: WarningAgent<'a>,
-    pub text: &'a [u8],
+    pub text: &'a str,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum MediaSubType<'a> {
     Any,
-    IETFExtension(&'a [u8]),
-    IANAExtension(&'a [u8]),
-    XExtension(&'a [u8]),
+    IETFExtension(&'a str),
+    IANAExtension(&'a str),
+    XExtension(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -279,14 +278,14 @@ pub enum MediaType<'a> {
     Application,
     Message,
     Multipart,
-    IETFExtension(&'a [u8]),
-    XExtension(&'a [u8]),
+    IETFExtension(&'a str),
+    XExtension(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct MediaParam<'a> {
-    pub name: &'a [u8],
-    pub value: &'a [u8],
+    pub name: &'a str,
+    pub value: &'a str,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -298,7 +297,7 @@ pub struct Media<'a> {
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum AcceptParam<'a> {
-    Q(&'a [u8]),
+    Q(&'a str),
     Extension(GenericParam<'a>),
 }
 
@@ -311,7 +310,7 @@ pub struct Accept<'a> {
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum ContentCoding<'a> {
     Any,
-    Other(&'a [u8]),
+    Other(&'a str),
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -323,7 +322,7 @@ pub struct Encoding<'a> {
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum LanguageRange<'a> {
     Any,
-    Other(&'a [u8]),
+    Other(&'a str),
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -338,14 +337,14 @@ pub enum DispositionType<'a> {
     Session,
     Icon,
     Alert,
-    Extension(&'a [u8]),
+    Extension(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum DispositionParam<'a> {
     HandlingOptional,
     HandlingRequired,
-    OtherHandling(&'a [u8]),
+    OtherHandling(&'a str),
     Extension(GenericParam<'a>),
 }
 
@@ -364,7 +363,7 @@ pub enum RetryParam<'a> {
 #[derive(PartialEq, Debug, Clone)]
 pub struct RetryAfter<'a> {
     pub duration: i32,
-    pub comment: Option<&'a [u8]>,
+    pub comment: Option<&'a str>,
     pub params: Vec<RetryParam<'a>>,
 }
 
@@ -377,44 +376,44 @@ pub enum Header<'a> {
     Allow(Vec<Method<'a>>),
     AuthenticationInfo(Vec<AuthenticationInfo<'a>>),
     Authorization(Credentials<'a>),
-    CallID(&'a [u8]),
+    CallID(&'a str),
     CallInfo(Vec<Info<'a>>),
     Contact(ContactValue<'a>),
     ContentDisposition(ContentDisposition<'a>),
-    ContentEncoding(Vec<&'a [u8]>),
-    ContentLanguage(Vec<&'a [u8]>),
-    ContentLength(&'a [u8]),
+    ContentEncoding(Vec<&'a str>),
+    ContentLanguage(Vec<&'a str>),
+    ContentLength(i32),
     ContentType(Media<'a>),
     CSeq(i32, Method<'a>),
-    Date(&'a [u8]),
+    Date(&'a str),
     ErrorInfo(Vec<ErrorInfo<'a>>),
     Expires(i32),
     From(From<'a>),
     Via(Vec<Via<'a>>),
-    InReplyTo(Vec<&'a [u8]>),
+    InReplyTo(Vec<&'a str>),
     MaxForwards(i32),
-    MIMEVersion(&'a [u8]),
+    MIMEVersion(&'a str),
     MinExpires(i32),
-    Organization(Option<&'a [u8]>),
+    Organization(Option<&'a str>),
     Priority(Priority<'a>),
     ProxyAuthenticate(Challenge<'a>),
     ProxyAuthorization(Credentials<'a>),
-    ProxyRequire(Vec<&'a [u8]>),
+    ProxyRequire(Vec<&'a str>),
     RecordRoute(Vec<RecordRoute<'a>>),
     ReplyTo(ReplyTo<'a>),
-    Require(Vec<&'a [u8]>),
+    Require(Vec<&'a str>),
     RetryAfter(RetryAfter<'a>),
     Route(Vec<Route<'a>>),
-    Server(&'a [u8]),
-    Subject(Option<&'a [u8]>),
-    Supported(Vec<&'a [u8]>),
-    Timestamp(&'a [u8], Option<&'a [u8]>),
+    Server(&'a str),
+    Subject(Option<&'a str>),
+    Supported(Vec<&'a str>),
+    Timestamp(&'a str, Option<&'a str>),
     To(To<'a>),
-    Unsupported(Vec<&'a [u8]>),
-    UserAgent(&'a [u8]),
+    Unsupported(Vec<&'a str>),
+    UserAgent(&'a str),
     Warning(Vec<Warning<'a>>),
     WWWAuthenticate(Challenge<'a>),
-    Extension(&'a [u8], &'a [u8]),
+    Extension(&'a str, &'a str),
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -426,7 +425,7 @@ pub struct Request<'a> {
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct Response<'a> {
-    pub content: &'a [u8],
+    pub content: &'a str,
 }
 
 #[derive(PartialEq, Debug, Clone)]

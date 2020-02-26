@@ -14,6 +14,7 @@ use crate::{
         rfc3261::{
             tokens::{
                 token,
+                token_str,
                 linear_whitespace,
                 header_colon,
                 comma,
@@ -47,12 +48,14 @@ use nom::{
     },
 };
 
-fn auth_param(input: &[u8]) -> Result<&[u8], (&[u8], &[u8])> {
-    let (input, (name, _, value)) = tuple((
-        token,
-        equal,
-        alt((token, quoted_string))
-    ))(input)?;
+fn auth_param(input: &[u8]) -> Result<&[u8], (&str, &str)> {
+    let (input, (name, value)) = pair(
+        token_str,
+        preceded(equal, alt((token, quoted_string)))
+    )(input)?;
+
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, (name, value)))
 }
@@ -74,25 +77,34 @@ fn dig_resp_response(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
         request_digest,
     ))(input)?;
 
+    let digest = std::str::from_utf8(digest)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, DigestResponseParam::Response(digest)))
 }
 
-fn nonce_count(input: &[u8]) -> Result<&[u8], &[u8]> {
+fn nonce_count(input: &[u8]) -> Result<&[u8], &str> {
     let (input, (_, _, value)) = tuple((
         tag_no_case("nc"),
         equal,
         take_while_m_n(8, 8, is_lowercase_hexadecimal)
     ))(input)?;
 
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, value))
 }
 
-fn cnonce(input: &[u8]) -> Result<&[u8], &[u8]> {
+fn cnonce(input: &[u8]) -> Result<&[u8], &str> {
     let (input, (_, _, cnonce)) = tuple((
         tag_no_case("cnonce"),
         equal,
         quoted_string,
     ))(input)?;
+
+    let cnonce = std::str::from_utf8(cnonce)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, cnonce))
 }
@@ -110,7 +122,7 @@ fn qop_value_auth_int(input: &[u8]) -> Result<&[u8], QOPValue> {
 }
 
 fn qop_value_extension(input: &[u8]) -> Result<&[u8], QOPValue> {
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, QOPValue::Extension(value)))
 }
@@ -151,6 +163,9 @@ fn dig_resp_uri(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
         right_double_quote,
     ))(input)?;
 
+    let uri = std::str::from_utf8(uri)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, DigestResponseParam::URI(uri)))
 }
 
@@ -160,6 +175,9 @@ fn dig_resp_username(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
         equal,
         quoted_string
     ))(input)?;
+
+    let username = std::str::from_utf8(username)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, DigestResponseParam::Username(username)))
 }
@@ -228,32 +246,41 @@ fn dig_resp(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
     ))(input)
 }
 
-fn realm(input: &[u8]) -> Result<&[u8], &[u8]> {
+fn realm(input: &[u8]) -> Result<&[u8], &str> {
     let (input, (_, _, realm)) = tuple((
         tag_no_case("realm"),
         equal,
         quoted_string
     ))(input)?;
 
+    let realm = std::str::from_utf8(realm)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, realm))
 }
 
-fn nonce(input: &[u8]) -> Result<&[u8], &[u8]> {
+fn nonce(input: &[u8]) -> Result<&[u8], &str> {
     let (input, (_, _, nonce)) = tuple((
         tag_no_case("nonce"),
         equal,
         quoted_string
     ))(input)?;
 
+    let nonce = std::str::from_utf8(nonce)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, nonce))
 }
 
-fn opaque(input: &[u8]) -> Result<&[u8], &[u8]> {
+fn opaque(input: &[u8]) -> Result<&[u8], &str> {
     let (input, (_, _, value)) = tuple((
         tag_no_case("opaque"),
         equal,
         quoted_string
     ))(input)?;
+
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, value))
 }
@@ -271,7 +298,7 @@ fn algorithm_md5_sess(input: &[u8]) -> Result<&[u8], AlgorithmKind> {
 }
 
 fn algorithm_extension(input: &[u8]) -> Result<&[u8], AlgorithmKind> {
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, AlgorithmKind::Extension(value)))
 }
@@ -304,7 +331,7 @@ fn credentials_digest_response(input: &[u8]) -> Result<&[u8], Credentials> {
 
 fn credentials_other_response(input: &[u8]) -> Result<&[u8], Credentials> {
     let (input, (name, params)) = pair(
-        terminated(token, linear_whitespace),
+        terminated(token_str, linear_whitespace),
         separated_nonempty_list(comma, auth_param)
     )(input)?;
 
@@ -345,6 +372,9 @@ fn ainfo_response_auth(input: &[u8]) -> Result<&[u8], AuthenticationInfo> {
         response_digest,
     )(input)?;
 
+    let auth = std::str::from_utf8(auth)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, AuthenticationInfo::ResponseAuth(auth)))
 }
 
@@ -356,6 +386,9 @@ fn ainfo_nextnonce(input: &[u8]) -> Result<&[u8], AuthenticationInfo> {
         ),
         quoted_string,
     )(input)?;
+
+    let nextnonce = std::str::from_utf8(nextnonce)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, AuthenticationInfo::NextNonce(nextnonce)))
 }
@@ -449,7 +482,7 @@ fn stale(input: &[u8]) -> Result<&[u8], bool> {
     Ok((input, value))
 }
 
-fn domain(input: &[u8]) -> Result<&[u8], Vec<&[u8]>> {
+fn domain(input: &[u8]) -> Result<&[u8], Vec<&str>> {
     let (input, domains) = preceded(
         tuple((
             tag_no_case("domain"),
@@ -463,6 +496,11 @@ fn domain(input: &[u8]) -> Result<&[u8], Vec<&[u8]>> {
             right_double_quote
         ),
     )(input)?;
+
+    let domains = domains.iter().map(|d|
+        std::str::from_utf8(d)
+            .map_err(|err| nom::Err::Failure(err.into()))
+    ).collect::<std::result::Result<Vec<&str>, _>>()?;
 
     Ok((input, domains))
 }
@@ -531,7 +569,7 @@ fn digest_cln(input: &[u8]) -> Result<&[u8], DigestParam> {
 
 fn challenge_other(input: &[u8]) -> Result<&[u8], Challenge> {
     let (input, (name, params)) = pair(
-        terminated(token, linear_whitespace),
+        terminated(token_str, linear_whitespace),
         separated_nonempty_list(comma, auth_param)
     )(input)?;
 
@@ -587,7 +625,7 @@ pub fn proxy_require(input: &[u8]) -> Result<&[u8], Header> {
             tag_no_case("Proxy-Require"),
             header_colon
         ),
-        separated_nonempty_list(comma, token)
+        separated_nonempty_list(comma, token_str)
     )(input)?;
 
     Ok((input, Header::ProxyRequire(requires)))

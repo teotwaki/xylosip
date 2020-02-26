@@ -11,7 +11,7 @@ use crate::{
                 left_angle_quote,
                 right_angle_quote,
                 semicolon,
-                token,
+                token_str,
             },
             common::{
                 absolute_uri,
@@ -29,13 +29,18 @@ use nom::{
     bytes::complete::{ tag, tag_no_case },
 };
 
-fn callid(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+fn callid(input: &[u8]) -> Result<&[u8], &str> {
+    let (input, callid) = recognize(
         pair(
             word,
             opt(pair(tag("@"), word))
         )
-    )(input)
+    )(input)?;
+
+    let callid = std::str::from_utf8(callid)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    Ok((input, callid))
 }
 
 pub fn call_id(input: &[u8]) -> Result<&[u8], Header> {
@@ -72,7 +77,7 @@ fn info_param_purpose_card(input: &[u8]) -> Result<&[u8], InfoParamPurpose> {
 }
 
 fn info_param_purpose_other(input: &[u8]) -> Result<&[u8], InfoParamPurpose> {
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, InfoParamPurpose::Other(value)))
 }
@@ -112,6 +117,9 @@ fn info(input: &[u8]) -> Result<&[u8], Info> {
         preceded(left_angle_quote, terminated(absolute_uri, right_angle_quote)),
         separated_list(semicolon, info_param)
     )(input)?;
+
+    let uri = std::str::from_utf8(uri)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, Info {
         uri,

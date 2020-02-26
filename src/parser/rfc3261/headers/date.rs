@@ -72,8 +72,8 @@ fn date1(input: &[u8]) -> Result<&[u8], &[u8]> {
     )(input)
 }
 
-fn rfc1123_date(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+fn rfc1123_date(input: &[u8]) -> Result<&[u8], &str> {
+    let (input, date) = recognize(
         tuple((
             wkday,
             tag(", "),
@@ -82,7 +82,12 @@ fn rfc1123_date(input: &[u8]) -> Result<&[u8], &[u8]> {
             time,
             tag_no_case(" GMT"),
         ))
-    )(input)
+    )(input)?;
+
+    let date = std::str::from_utf8(date)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    Ok((input, date))
 }
 
 pub fn date(input: &[u8]) -> Result<&[u8], Header> {

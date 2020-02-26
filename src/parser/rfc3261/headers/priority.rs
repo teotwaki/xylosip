@@ -4,7 +4,7 @@ use crate::{
         Result,
         rfc3261::tokens::{
             header_colon,
-            token,
+            token_str,
         },
     },
 };
@@ -40,7 +40,7 @@ fn priority_value_non_urgent(input: &[u8]) -> Result<&[u8], Priority> {
 }
 
 fn priority_value_extension(input: &[u8]) -> Result<&[u8], Priority> {
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, Priority::Extension(value)))
 }

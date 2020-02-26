@@ -4,7 +4,7 @@ use crate::{
         Result,
         rfc3261::{
             tokens::{
-                token,
+                token_str,
                 header_colon,
                 comma,
                 quoted_string,
@@ -31,11 +31,14 @@ use nom::{
 fn warning_agent_host_port(input: &[u8]) -> Result<&[u8], WarningAgent> {
     let (input, (host, port)) = host_port(input)?;
 
+    let host = std::str::from_utf8(host)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, WarningAgent::HostPort(host, port)))
 }
 
 fn warning_agent_pseudonym(input: &[u8]) -> Result<&[u8], WarningAgent> {
-    let (input, pseudonym) = token(input)?;
+    let (input, pseudonym) = token_str(input)?;
 
     Ok((input, WarningAgent::Pseudonym(pseudonym)))
 }
@@ -54,6 +57,11 @@ fn warning_value(input: &[u8]) -> Result<&[u8], Warning> {
         preceded(tag(" "), warning_agent),
         preceded(tag(" "), quoted_string)
     ))(input)?;
+
+    let code = std::str::from_utf8(code)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+    let text = std::str::from_utf8(text)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, Warning {
         code,

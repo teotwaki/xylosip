@@ -1,11 +1,13 @@
 use crate::{
     message::{ Header, ViaParam, Via },
     parser::{
+        Error,
         integer,
         Result,
         rfc3261::{
             tokens::{
                 token,
+                token_str,
                 linear_whitespace,
                 header_colon,
                 comma,
@@ -28,7 +30,7 @@ use crate::{
 
 use nom::{
     combinator::{ opt, recognize },
-    sequence::{ pair, tuple },
+    sequence::{ pair, tuple, preceded },
     multi::many0,
     branch::alt,
     bytes::complete::tag_no_case,
@@ -43,11 +45,16 @@ fn sent_by(input: &[u8]) -> Result<&[u8], &[u8]> {
     )(input)
 }
 
-fn protocol_name(input: &[u8]) -> Result<&[u8], &[u8]> {
-    alt((
+fn protocol_name(input: &[u8]) -> Result<&[u8], &str> {
+    let (input, value) = alt((
         tag_no_case("SIP"),
         token,
-    ))(input)
+    ))(input)?;
+
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(Error::from(err)))?;
+
+    Ok((input, value))
 }
 
 fn sent_protocol(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -69,11 +76,13 @@ fn via_extension(input: &[u8]) -> Result<&[u8], ViaParam> {
 }
 
 fn via_branch(input: &[u8]) -> Result<&[u8], ViaParam> {
-    let (input, (_, _, branch)) = tuple((
-        tag_no_case("branch"),
-        equal,
-        token,
-    ))(input)?;
+    let (input, branch) = preceded(
+        pair(
+            tag_no_case("branch"),
+            equal,
+        ),
+        token_str,
+    )(input)?;
 
     Ok((input, ViaParam::Branch(branch)))
 }
@@ -85,6 +94,9 @@ fn via_received(input: &[u8]) -> Result<&[u8], ViaParam> {
         alt((ipv4_address, ipv6_address)),
     ))(input)?;
 
+    let addr = std::str::from_utf8(addr)
+        .map_err(|err| nom::Err::Failure(Error::from(err)))?;
+
     Ok((input, ViaParam::Received(addr)))
 }
 
@@ -94,6 +106,9 @@ fn via_maddr(input: &[u8]) -> Result<&[u8], ViaParam> {
         equal,
         host,
     ))(input)?;
+
+    let maddr = std::str::from_utf8(maddr)
+        .map_err(|err| nom::Err::Failure(Error::from(err)))?;
 
     Ok((input, ViaParam::MAddr(maddr)))
 }
@@ -127,6 +142,12 @@ fn via_parm(input: &[u8]) -> Result<&[u8], Via> {
     ))(input)?;
 
     let params = params.into_iter().map(|(_, param)| param).collect();
+
+    let protocol = std::str::from_utf8(protocol)
+        .map_err(|err| nom::Err::Failure(Error::from(err)))?;
+
+    let sent_by = std::str::from_utf8(sent_by)
+        .map_err(|err| nom::Err::Failure(Error::from(err)))?;
 
     Ok((input, Via {
         protocol,

@@ -18,6 +18,7 @@ use crate::{
         rfc3261::{
             tokens::{
                 token,
+                token_str,
                 linear_whitespace,
                 header_colon,
                 comma,
@@ -68,6 +69,9 @@ fn contact_params_q(input: &[u8]) -> Result<&[u8], ContactParam> {
         qvalue,
     )(input)?;
 
+    let q = std::str::from_utf8(q)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, ContactParam::Q(q)))
 }
 
@@ -116,6 +120,15 @@ fn contact_param(input: &[u8]) -> Result<&[u8], Contact> {
         many0(preceded(semicolon, contact_params))
     )(input)?;
 
+    let addr = std::str::from_utf8(addr)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    let name = match name {
+        Some(n) => Some(std::str::from_utf8(n)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
+
     Ok((input, Contact {
         name,
         addr,
@@ -153,13 +166,13 @@ pub fn contact(input: &[u8]) -> Result<&[u8], Header> {
     Ok((input, Header::Contact(value)))
 }
 
-fn tag_param(input: &[u8]) -> Result<&[u8], &[u8]> {
+fn tag_param(input: &[u8]) -> Result<&[u8], &str> {
     let (input, tag) = preceded(
         pair(
             tag_no_case("tag"),
             equal,
         ),
-        token,
+        token_str,
     )(input)?;
 
     Ok((input, tag))
@@ -182,6 +195,15 @@ fn from_spec(input: &[u8]) -> Result<&[u8], From> {
         alt((name_addr, addr_spec)),
         many0(preceded(semicolon, alt((from_param_tag, from_param_extension))))
     )(input)?;
+
+    let addr = std::str::from_utf8(addr)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    let name = match name {
+        Some(n) => Some(std::str::from_utf8(n)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
 
     Ok((input, From {
         name,
@@ -208,6 +230,14 @@ fn rec_route(input: &[u8]) -> Result<&[u8], RecordRoute> {
         generic_params,
     )(input)?;
 
+    let addr = std::str::from_utf8(addr)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+    let name = match name {
+        Some(n) => Some(std::str::from_utf8(n)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
+
     Ok((input, RecordRoute {
         addr,
         name,
@@ -233,6 +263,14 @@ fn rplyto_spec(input: &[u8]) -> Result<&[u8], ReplyTo> {
         generic_params,
     )(input)?;
 
+    let addr = std::str::from_utf8(addr)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+    let name = match name {
+        Some(n) => Some(std::str::from_utf8(n)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
+
     Ok((input, ReplyTo {
         addr,
         name,
@@ -257,6 +295,14 @@ fn route_param(input: &[u8]) -> Result<&[u8], Route> {
         name_addr,
         generic_params,
     )(input)?;
+
+    let addr = std::str::from_utf8(addr)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+    let name = match name {
+        Some(n) => Some(std::str::from_utf8(n)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
 
     Ok((input, Route {
         addr,
@@ -308,6 +354,15 @@ pub fn to(input: &[u8]) -> Result<&[u8], Header> {
         )
     )(input)?;
 
+    let addr = std::str::from_utf8(addr)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    let name = match name {
+        Some(n) => Some(std::str::from_utf8(n)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
+
     Ok((input, Header::To(To {
         addr,
         name,
@@ -327,24 +382,24 @@ mod tests {
 
     #[test]
     fn contact_params_q_extracts_value() {
-        assert_eq!(contact_params_q(b"q=1.0").unwrap().1, ContactParam::Q(b"1.0"));
+        assert_eq!(contact_params_q(b"q=1.0").unwrap().1, ContactParam::Q("1.0"));
     }
 
     #[test]
     fn contact_params_extension_extracts_value() {
         assert_eq!(contact_params_extension(b"other").unwrap().1, ContactParam::Extension(GenericParam {
-            name: b"other",
+            name: "other",
             value: None,
         }));
 
         assert_eq!(contact_params_extension(b"other=").unwrap().1, ContactParam::Extension(GenericParam {
-            name: b"other",
+            name: "other",
             value: None,
         }));
 
         assert_eq!(contact_params_extension(b"other=value").unwrap().1, ContactParam::Extension(GenericParam {
-            name: b"other",
-            value: Some(b"value"),
+            name: "other",
+            value: Some("value"),
         }));
     }
 
@@ -370,11 +425,11 @@ mod tests {
     #[test]
     fn contact_param_can_parse_full_contact() {
         assert!(contact_param(b"\"John\" <sip:j@example.com>;expires=8;q=1.0").unwrap().1 == Contact {
-            addr: b"sip:j@example.com",
-            name: Some(b"John"),
+            addr: "sip:j@example.com",
+            name: Some("John"),
             params: vec![
                 ContactParam::Expires(8),
-                ContactParam::Q(b"1.0")
+                ContactParam::Q("1.0")
             ]
         })
     }

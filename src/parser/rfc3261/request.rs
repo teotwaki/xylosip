@@ -1,6 +1,7 @@
 use crate::{
     message::{ Message, Request, RequestLine, },
     parser::{
+        Error,
         Result,
         rfc3261::{
             common,
@@ -36,6 +37,9 @@ fn request_line(input: &[u8]) -> Result<&[u8], RequestLine> {
         tokens::newline,
     )(input)?;
 
+    let uri = std::str::from_utf8(uri)
+        .map_err(|err| nom::Err::Failure(Error::from(err)))?;
+
     Ok((input, RequestLine {
         method,
         uri,
@@ -67,7 +71,7 @@ mod tests {
         let rl = b"INVITE sip:bob@biloxi.example.com SIP/2.0\r\n";
         let parsed = request_line(rl).unwrap().1;
         assert_eq!(parsed.method, Method::Invite);
-        assert!(parsed.uri == b"sip:bob@biloxi.example.com");
+        assert_eq!(parsed.uri, "sip:bob@biloxi.example.com");
         assert_eq!(parsed.version, Version::Two);
     }
 }

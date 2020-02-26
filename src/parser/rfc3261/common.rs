@@ -221,7 +221,7 @@ pub fn transport_tls(input: &[u8]) -> Result<&[u8], Transport> {
 }
 
 pub fn transport_extension(input: &[u8]) -> Result<&[u8], Transport> {
-    let (input, value) = tokens::token(input)?;
+    let (input, value) = tokens::token_str(input)?;
 
     Ok((input, Transport::Extension(value)))
 }
@@ -258,7 +258,7 @@ fn user_ip(input: &[u8]) -> Result<&[u8], User> {
 }
 
 fn user_extension(input: &[u8]) -> Result<&[u8], User> {
-    let (input, value) = tokens::token(input)?;
+    let (input, value) = tokens::token_str(input)?;
 
     Ok((input, User::Other(value)))
 }
@@ -308,6 +308,9 @@ pub fn ttl(input: &[u8]) -> Result<&[u8], i32> {
 fn uri_parameter_maddr(input: &[u8]) -> Result<&[u8], URIParam> {
     let (input, maddr) = preceded(tag_no_case("maddr="), host)(input)?;
 
+    let maddr = std::str::from_utf8(maddr)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, URIParam::MAddr(maddr)))
 }
 
@@ -327,6 +330,14 @@ fn uri_parameter_other(input: &[u8]) -> Result<&[u8], URIParam> {
             )
         )
     )(input)?;
+
+    let name = std::str::from_utf8(name)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+    let value = match value {
+        Some(v) => Some(std::str::from_utf8(v)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
 
     Ok((input, URIParam::Other(name, value)))
 }
@@ -358,6 +369,11 @@ fn header(input: &[u8]) -> Result<&[u8], URIHeader> {
         tag("="),
         take_while(tokens::is_header_char)
     )(input)?;
+
+    let name = std::str::from_utf8(name)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, URIHeader {
         name,
@@ -409,7 +425,7 @@ fn register(input: &[u8]) -> Result<&[u8], Method> {
 }
 
 fn extension_method(input: &[u8]) -> Result<&[u8], Method> {
-    let (input, method) = tokens::token(input)?;
+    let (input, method) = tokens::token_str(input)?;
 
     Ok((input, Method::Extension(method)))
 }
@@ -532,17 +548,22 @@ pub fn absolute_uri(input: &[u8]) -> Result<&[u8], &[u8]> {
     ))(input)
 }
 
-fn gen_value(input: &[u8]) -> Result<&[u8], &[u8]> {
-    alt((
+fn gen_value(input: &[u8]) -> Result<&[u8], &str> {
+    let (input, value) = alt((
         host,
         tokens::token,
         tokens::quoted_string,
-    ))(input)
+    ))(input)?;
+
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    Ok((input, value))
 }
 
 pub fn generic_param(input: &[u8]) -> Result<&[u8], GenericParam> {
     let (input, (name, value)) = pair(
-        tokens::token,
+        tokens::token_str,
         opt(preceded(tokens::equal, gen_value))
     )(input)?;
 
@@ -558,8 +579,8 @@ pub fn generic_params(input: &[u8]) -> Result<&[u8], Vec<GenericParam>> {
     Ok((input, params))
 }
 
-pub fn option_tag(input: &[u8]) -> Result<&[u8], Vec<&[u8]>> {
-    let (input, options) = many0(preceded(tokens::comma, tokens::token))(input)?;
+pub fn option_tag(input: &[u8]) -> Result<&[u8], Vec<&str>> {
+    let (input, options) = many0(preceded(tokens::comma, tokens::token_str))(input)?;
 
     Ok((input, options))
 }

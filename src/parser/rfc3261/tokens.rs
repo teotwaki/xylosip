@@ -68,12 +68,14 @@ pub fn newline(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 pub fn linear_whitespace(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+    let (input, ws) = recognize(
         pair(
             opt(pair(space0, newline)),
             space1,
         )
-    )(input)
+    )(input)?;
+
+    Ok((input, ws))
 }
 
 fn separator_whitespace(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -95,7 +97,18 @@ fn is_token(i: u8) -> bool {
 }
 
 pub fn token(input: &[u8]) -> Result<&[u8], &[u8]> {
-    take_while1(is_token)(input)
+    let (input, tokens) = take_while1(is_token)(input)?;
+
+    Ok((input, tokens))
+}
+
+pub fn token_str(input: &[u8]) -> Result<&[u8], &str> {
+    let (input, tokens) = token(input)?;
+
+    let tokens = std::str::from_utf8(tokens)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    Ok((input, tokens))
 }
 
 const WORD_CHARS: &'static [u8] = b"-.!%*_+`'~()<>:\\\"/[]?{}";
@@ -298,7 +311,9 @@ fn is_utf8_ascii(i: u8) -> bool {
 }
 
 fn utf8_ascii1(input: &[u8]) -> Result<&[u8], &[u8]> {
-    take_while_m_n(1, 1, is_utf8_ascii)(input)
+    let (input, char) = take_while_m_n(1, 1, is_utf8_ascii)(input)?;
+
+    Ok((input, char))
 }
 
 pub fn is_utf8_nonascii(i: u8) -> bool {
@@ -308,7 +323,7 @@ pub fn is_utf8_nonascii(i: u8) -> bool {
 }
 
 fn utf8_nonascii1(input: &[u8]) -> Result<&[u8], &[u8]> {
-    alt(
+    let (input, char) = alt(
         (
             utf8_nonascii_c0_df,
             utf8_nonascii_e0_ef,
@@ -316,7 +331,9 @@ fn utf8_nonascii1(input: &[u8]) -> Result<&[u8], &[u8]> {
             utf8_nonascii_f8_fb,
             utf8_nonascii_fc_fd
         )
-    )(input)
+    )(input)?;
+
+    Ok((input, char))
 }
 
 pub fn utf8_char1(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -344,7 +361,9 @@ fn is_comment_char(i: u8) -> bool {
 }
 
 fn comment_char(input: &[u8]) -> Result<&[u8], &[u8]> {
-    take_while_m_n(1, 1, is_comment_char)(input)
+    let (input, char) = take_while_m_n(1, 1, is_comment_char)(input)?;
+
+    Ok((input, char))
 }
 
 fn comment_text(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -352,13 +371,13 @@ fn comment_text(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 pub fn comment(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
-        tuple((
-                left_parenthesis,
-                many0(alt((comment_text, comment, quoted_pair))),
-                right_parenthesis,
-        ))
-    )(input)
+    let (input, comment) = preceded(
+        left_parenthesis,
+        terminated(alt((comment_text, comment, quoted_pair)),
+            right_parenthesis)
+    )(input)?;
+
+    Ok((input, comment))
 }
 
 fn is_quotable_character(i: u8) -> bool {
@@ -371,12 +390,14 @@ fn quotable_character(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 fn quoted_pair(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+    let (input, pair) = recognize(
         pair(
             tag("\\"),
             quotable_character,
         )
-    )(input)
+    )(input)?;
+
+    Ok((input, pair))
 }
 
 fn is_quoted_text_char(i: u8) -> bool {
@@ -386,7 +407,9 @@ fn is_quoted_text_char(i: u8) -> bool {
 }
 
 fn quoted_text_char(input: &[u8]) -> Result<&[u8], &[u8]> {
-    take_while_m_n(1, 1, is_quoted_text_char)(input)
+    let (input, char) = take_while_m_n(1, 1, is_quoted_text_char)(input)?;
+
+    Ok((input, char))
 }
 
 fn quoted_text(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -398,7 +421,7 @@ fn quoted_text(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 pub fn quoted_string(input: &[u8]) -> Result<&[u8], &[u8]> {
-    preceded(
+    let (input, string) = preceded(
         separator_whitespace,
         terminated(
             preceded(
@@ -407,7 +430,9 @@ pub fn quoted_string(input: &[u8]) -> Result<&[u8], &[u8]> {
             ),
             tag("\"")
         )
-    )(input)
+    )(input)?;
+
+    Ok((input, string))
 }
 
 const PASSWORD_CHARS: &'static [u8] = b"&=+$,";

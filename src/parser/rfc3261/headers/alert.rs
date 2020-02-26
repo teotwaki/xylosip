@@ -29,6 +29,9 @@ fn alert_param(input: &[u8]) -> Result<&[u8], AlertInfo> {
         generic_params,
     )(input)?;
 
+    let uri = std::str::from_utf8(uri)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, AlertInfo {
         uri,
         params,

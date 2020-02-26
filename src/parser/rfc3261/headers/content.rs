@@ -16,10 +16,12 @@ use crate::{
         ContentDisposition,
     },
     parser::{
+        integer,
         Result,
         rfc3261::{
             tokens::{
                 token,
+                token_str,
                 quoted_string,
                 equal,
                 slash,
@@ -37,11 +39,10 @@ use crate::{
 
 use nom::{
     combinator::{ opt, recognize },
-    sequence::{ pair, tuple },
+    sequence::{ pair, tuple, preceded, },
     branch::alt,
-    multi::many0,
+    multi::{ many0, separated_nonempty_list, },
     character::is_alphabetic,
-    character::complete::digit1,
     bytes::complete::{ tag, tag_no_case, take_while_m_n, },
 };
 
@@ -94,7 +95,7 @@ fn m_type_message(input: &[u8]) -> Result<&[u8], MediaType> {
 }
 
 fn m_type_ietf_extension(input: &[u8]) -> Result<&[u8], MediaType> {
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, MediaType::IETFExtension(value)))
 }
@@ -106,6 +107,9 @@ fn m_type_x_extension(input: &[u8]) -> Result<&[u8], MediaType> {
             token,
         )
     )(input)?;
+
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, MediaType::XExtension(value)))
 }
@@ -132,14 +136,14 @@ fn m_subtype_any(input: &[u8]) -> Result<&[u8], MediaSubType> {
 }
 
 fn m_subtype_ietf_extension(input: &[u8]) -> Result<&[u8], MediaSubType> {
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, MediaSubType::IETFExtension(value)))
 }
 
 fn m_subtype_iana_extension(input: &[u8]) -> Result<&[u8], MediaSubType> {
     // TODO: This is unreachable?
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, MediaSubType::IANAExtension(value)))
 }
@@ -151,6 +155,9 @@ fn m_subtype_x_extension(input: &[u8]) -> Result<&[u8], MediaSubType> {
             token,
         )
     )(input)?;
+
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, MediaSubType::XExtension(value)))
 }
@@ -165,11 +172,13 @@ fn m_subtype(input: &[u8]) -> Result<&[u8], MediaSubType> {
 }
 
 fn m_parameter(input: &[u8]) -> Result<&[u8], MediaParam> {
-    let (input, (name, _, value)) = tuple((
-        token,
-        equal,
-        alt((token, quoted_string))
-    ))(input)?;
+    let (input, (name, value)) = pair(
+        token_str,
+        preceded(equal, alt((token, quoted_string)))
+    )(input)?;
+
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, MediaParam {
         name,
@@ -197,6 +206,9 @@ fn accept_param_q(input: &[u8]) -> Result<&[u8], AcceptParam> {
         equal,
         qvalue
     ))(input)?;
+
+    let q = std::str::from_utf8(q)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, AcceptParam::Q(q)))
 }
@@ -256,7 +268,7 @@ fn codings_any(input: &[u8]) -> Result<&[u8], ContentCoding> {
 }
 
 fn codings_other(input: &[u8]) -> Result<&[u8], ContentCoding> {
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, ContentCoding::Other(value)))
 }
@@ -312,6 +324,9 @@ fn language_range_other(input: &[u8]) -> Result<&[u8], LanguageRange> {
         many0(pair(tag("-"), take_while_m_n(1, 8, is_alphabetic)))
     ))(input)?;
 
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, LanguageRange::Other(value)))
 }
 
@@ -355,13 +370,11 @@ pub fn accept_language(input: &[u8]) -> Result<&[u8], Header> {
 }
 
 fn media_type(input: &[u8]) -> Result<&[u8], Media> {
-    let (input, (r#type, _, subtype, params)) = tuple((
+    let (input, (r#type, subtype, params)) = tuple((
         m_type,
-        slash,
-        m_subtype,
-        many0(pair(semicolon, m_parameter))
+        preceded(slash, m_subtype),
+        many0(preceded(semicolon, m_parameter))
     ))(input)?;
-    let params: Vec<MediaParam> = params.into_iter().map(|(_, param)| param).collect();
 
     // TODO: Validate that type and subtype are not `Any`
 
@@ -392,26 +405,25 @@ pub fn content_length(input: &[u8]) -> Result<&[u8], Header> {
             tag_no_case("l"),
         )),
         header_colon,
-        digit1,
+        integer,
     ))(input)?;
 
     Ok((input, Header::ContentLength(length)))
 }
 
 pub fn content_encoding(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        alt((
-            tag_no_case("Content-Encoding"),
-            tag_no_case("e"),
-        )),
-        header_colon,
-        token,
-        many0(pair(comma, token))
-    ))(input)?;
-    let mut others: Vec<&[u8]> = others.into_iter().map(|(_, coding)| coding).collect();
-    others.insert(0, first);
+    let (input, encodings) = preceded(
+        pair(
+            alt((
+                tag_no_case("Content-Encoding"),
+                tag_no_case("e"),
+            )),
+            header_colon,
+        ),
+        separated_nonempty_list(comma, token_str)
+    )(input)?;
 
-    Ok((input, Header::ContentEncoding(others)))
+    Ok((input, Header::ContentEncoding(encodings)))
 }
 
 fn disposition_param_handling_optional(input: &[u8]) -> Result<&[u8], DispositionParam> {
@@ -438,7 +450,7 @@ fn disposition_param_handling_other(input: &[u8]) -> Result<&[u8], DispositionPa
     let (input, (_, _, value)) = tuple((
         tag_no_case("handling"),
         equal,
-        token,
+        token_str,
     ))(input)?;
 
     Ok((input, DispositionParam::OtherHandling(value)))
@@ -485,7 +497,7 @@ fn disp_type_alert(input: &[u8]) -> Result<&[u8], DispositionType> {
 }
 
 fn disp_type_extension(input: &[u8]) -> Result<&[u8], DispositionType> {
-    let (input, value) = token(input)?;
+    let (input, value) = token_str(input)?;
 
     Ok((input, DispositionType::Extension(value)))
 }
@@ -501,13 +513,16 @@ fn disp_type(input: &[u8]) -> Result<&[u8], DispositionType> {
 }
 
 pub fn content_disposition(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, disposition, params)) = tuple((
-        tag_no_case("Content-Disposition"),
-        header_colon,
-        disp_type,
-        many0(pair(semicolon, disposition_param))
-    ))(input)?;
-    let params: Vec<DispositionParam> = params.into_iter().map(|(_, param)| param).collect();
+    let (input, (disposition, params)) = preceded(
+        pair(
+            tag_no_case("Content-Disposition"),
+            header_colon,
+        ),
+        pair(
+            disp_type,
+            many0(preceded(semicolon, disposition_param))
+        )
+    )(input)?;
 
     Ok((input, Header::ContentDisposition(ContentDisposition {
         disposition,
@@ -515,24 +530,26 @@ pub fn content_disposition(input: &[u8]) -> Result<&[u8], Header> {
     })))
 }
 
-fn language_tag(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+fn language_tag(input: &[u8]) -> Result<&[u8], &str> {
+    let (input, tag) = recognize(
         pair(
             take_while_m_n(1, 8, is_alphabetic),
             many0(pair(tag("-"), take_while_m_n(1, 8, is_alphabetic)))
         )
-    )(input)
+    )(input)?;
+
+    let tag = std::str::from_utf8(tag)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    Ok((input, tag))
 }
 
 pub fn content_language(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
+    let (input, (_, _, tags)) = tuple((
         tag_no_case("Content-Language"),
         header_colon,
-        language_tag,
-        many0(pair(comma, language_tag))
+        separated_nonempty_list(comma, language_tag)
     ))(input)?;
-    let mut others: Vec<&[u8]> = others.into_iter().map(|(_, language)| language).collect();
-    others.insert(0, first);
 
-    Ok((input, Header::ContentLanguage(others)))
+    Ok((input, Header::ContentLanguage(tags)))
 }

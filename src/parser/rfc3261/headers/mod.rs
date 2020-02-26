@@ -17,6 +17,7 @@ use crate::{
             tokens::{
                 header_colon,
                 token,
+                token_str,
                 utf8_char1,
                 is_utf8_cont,
                 linear_whitespace,
@@ -39,7 +40,7 @@ use crate::{
 
 use nom::{
     combinator::{ opt, recognize },
-    sequence::{ pair, tuple },
+    sequence::{ pair, tuple, preceded, },
     branch::alt,
     multi:: many0,
     character::complete::{ digit0, digit1 },
@@ -119,6 +120,9 @@ fn mime_version(input: &[u8]) -> Result<&[u8], Header> {
         )))
     ))(input)?;
 
+    let version = std::str::from_utf8(version)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, Header::MIMEVersion(version)))
 }
 
@@ -139,18 +143,28 @@ fn organization(input: &[u8]) -> Result<&[u8], Header> {
         opt(utf8_trim),
     ))(input)?;
 
+    let org = match org {
+        Some(org) => Some(std::str::from_utf8(org)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
+
     Ok((input, Header::Organization(org)))
 }
 
 fn require(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, mut others)) = tuple((
-        tag_no_case("Require"),
-        header_colon,
-        token,
-        option_tag,
-    ))(input)?;
-
+    let (input, (first, mut others)) = preceded(
+        pair(
+            tag_no_case("Require"),
+            header_colon,
+        ),
+        pair(
+            token_str,
+            option_tag,
+        )
+    )(input)?;
     others.insert(0, first);
+
     Ok((input, Header::Require(others)))
 }
 
@@ -193,6 +207,12 @@ fn retry_after(input: &[u8]) -> Result<&[u8], Header> {
         retry_params
     ))(input)?;
 
+    let comment = match comment {
+        Some(comment) => Some(std::str::from_utf8(comment)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
+
     Ok((input, Header::RetryAfter(RetryAfter {
         duration,
         comment,
@@ -220,6 +240,9 @@ fn server(input: &[u8]) -> Result<&[u8], Header> {
         )),
     ))(input)?;
 
+    let s = std::str::from_utf8(s)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, Header::Server(s)))
 }
 
@@ -233,6 +256,9 @@ fn user_agent(input: &[u8]) -> Result<&[u8], Header> {
         )),
     ))(input)?;
 
+    let ua = std::str::from_utf8(ua)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, Header::UserAgent(ua)))
 }
 
@@ -243,6 +269,12 @@ fn subject(input: &[u8]) -> Result<&[u8], Header> {
         opt(utf8_trim),
     ))(input)?;
 
+    let subject = match subject {
+        Some(subject) => Some(std::str::from_utf8(subject)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
+
     Ok((input, Header::Subject(subject)))
 }
 
@@ -250,16 +282,16 @@ fn supported(input: &[u8]) -> Result<&[u8], Header> {
     let (input, (_, _, first, mut others)) = tuple((
         alt((tag_no_case("Supported"), tag_no_case("k"))),
         header_colon,
-        token,
+        token_str,
         option_tag,
     ))(input)?;
-
     others.insert(0, first);
+
     Ok((input, Header::Supported(others)))
 }
 
-fn delay(input: &[u8]) -> Result<&[u8], Option<&[u8]>> {
-    let (input, delay) = opt(pair(
+fn delay(input: &[u8]) -> Result<&[u8], Option<&str>> {
+    let (input, delay) = opt(preceded(
         linear_whitespace,
         recognize(
             pair(
@@ -269,10 +301,13 @@ fn delay(input: &[u8]) -> Result<&[u8], Option<&[u8]>> {
         ),
     ))(input)?;
 
-    Ok((input, match delay {
-        Some((_, delay)) => Some(delay),
-        _ => None,
-    }))
+    let delay = match delay {
+        Some(delay) => Some(std::str::from_utf8(delay)
+            .map_err(|err| nom::Err::Failure(err.into()))?),
+        None => None,
+    };
+
+    Ok((input, delay))
 }
 
 fn timestamp(input: &[u8]) -> Result<&[u8], Header> {
@@ -288,6 +323,9 @@ fn timestamp(input: &[u8]) -> Result<&[u8], Header> {
         delay
     ))(input)?;
 
+    let ts = std::str::from_utf8(ts)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
     Ok((input, Header::Timestamp(ts, delay)))
 }
 
@@ -295,27 +333,32 @@ fn unsupported(input: &[u8]) -> Result<&[u8], Header> {
     let (input, (_, _, first, mut others)) = tuple((
         tag_no_case("Unsupported"),
         header_colon,
-        token,
+        token_str,
         option_tag,
     ))(input)?;
-
     others.insert(0, first);
+
     Ok((input, Header::Unsupported(others)))
 }
 
-fn header_value(input: &[u8]) -> Result<&[u8], &[u8]> {
-    recognize(
+fn header_value(input: &[u8]) -> Result<&[u8], &str> {
+    let (input, value) = recognize(
         many0(alt((
             utf8_char1,
             take_while(is_utf8_cont),
             linear_whitespace,
         )))
-    )(input)
+    )(input)?;
+
+    let value = std::str::from_utf8(value)
+        .map_err(|err| nom::Err::Failure(err.into()))?;
+
+    Ok((input, value))
 }
 
 fn extension_header(input: &[u8]) -> Result<&[u8], Header> {
     let (input, (name, _, value)) = tuple((
-        token,
+        token_str,
         header_colon,
         header_value,
     ))(input)?;
@@ -397,11 +440,11 @@ mod tests {
         match header {
             Header::Via(vias) => {
                 let via = &vias[0];
-                assert_eq!(via.protocol, b"SIP/2.0/TCP");
-                assert_eq!(via.sent_by, b"client.atlanta.example.com:5060");
+                assert_eq!(via.protocol, "SIP/2.0/TCP");
+                assert_eq!(via.sent_by, "client.atlanta.example.com:5060");
 
                 match &via.params[0] {
-                    ViaParam::Branch(v) => assert_eq!(v, b"z9hG4bK74b43"),
+                    ViaParam::Branch(v) => assert_eq!(v, &"z9hG4bK74b43"),
                     _ => panic!(),
                 }
             },
