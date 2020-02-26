@@ -1,7 +1,5 @@
-mod rfc2806;
-mod rfc3261;
-
-pub use rfc3261::{ sip_message };
+pub mod rfc2806;
+pub mod rfc3261;
 
 use nom::error::ParseError;
 

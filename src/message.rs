@@ -433,3 +433,22 @@ pub enum Message<'a> {
     Request(Request<'a>),
     Response(Response<'a>),
 }
+
+pub enum ParsingError {
+    AnError,
+}
+
+impl<'a> Message<'a> {
+    pub fn parse(input: &'a [u8]) -> Result<Self, ParsingError> {
+        use crate::parser::rfc3261;
+        use nom::branch::alt;
+
+        let (_, message) = alt((
+                rfc3261::request,
+                rfc3261::response,
+        ))(input)
+            .map_err(|_| ParsingError::AnError)?;
+
+        Ok(message)
+    }
+}
