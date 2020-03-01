@@ -27,7 +27,7 @@
 
 mod parser;
 mod message;
-mod request;
+pub mod request;
 mod response;
 pub mod header;
 mod method;
