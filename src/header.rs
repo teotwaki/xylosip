@@ -1,11 +1,37 @@
 use super::sip::*;
 
+/// Representation of an HTTP Language Range
+///
+/// **Note**: This may be renamed to `LanguageTag` in the future to be clearer and more in line
+/// with RFC2616.
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum LanguageRange<'a> {
+    /// This variant indicates that the language in question was equal to `*`. This means that the
+    /// user accepts any language equally.
     Any,
+
+    /// Any other value (more restrictive than `*`) will be stored in this variant. The value of
+    /// this string will be composed of a primary tag and zero or more subtags, separated by
+    /// dashes.
+    ///
+    /// # ABNF
+    /// ```ignore
+    /// language-tag  = primary-tag *( "-" subtag )
+    /// primary-tag   = 1*8ALPHA
+    /// subtag        = 1*8ALPHA
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// - `en`
+    /// - `en-US`
+    /// - `en-cockney`
+    /// - `i-cherokee`
+    /// - `x-pig-latin`
     Other(&'a str),
 }
 
+/// Language description, used in the Accept-Language header
 #[derive(PartialEq, Debug, Clone)]
 pub struct Language<'a> {
     pub range: LanguageRange<'a>,
