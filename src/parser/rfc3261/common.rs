@@ -443,12 +443,10 @@ pub fn method(input: &[u8]) -> Result<&[u8], Method> {
 }
 
 pub fn sip_version(input: &[u8]) -> Result<&[u8], Version> {
-    let (input, (_, major, _, minor)) = tuple((
-        tag_no_case("SIP/"),
-        integer,
-        tag("."),
-        integer,
-    ))(input)?;
+    let (input, (major, minor)) = pair(
+        preceded(tag_no_case("SIP/"), integer),
+        preceded(tag("."), integer),
+    )(input)?;
 
     let version = match (major, minor) {
         (2, 0) => Version::Two,

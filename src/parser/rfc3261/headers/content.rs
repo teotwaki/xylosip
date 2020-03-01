@@ -203,11 +203,13 @@ fn media_range(input: &[u8]) -> Result<&[u8], Media> {
 }
 
 fn accept_param_q(input: &[u8]) -> Result<&[u8], AcceptParam> {
-    let (input, (_, _, q)) = tuple((
-        tag_no_case("q"),
-        equal,
+    let (input, q) = preceded(
+        pair(
+            tag_no_case("q"),
+            equal,
+        ),
         qvalue
-    ))(input)?;
+    )(input)?;
 
     let q = std::str::from_utf8(q)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -361,27 +363,31 @@ fn media_type(input: &[u8]) -> Result<&[u8], Media> {
 }
 
 pub fn content_type(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, media)) = tuple((
-        alt((
-            tag_no_case("Content-Type"),
-            tag_no_case("c"),
-        )),
-        header_colon,
+    let (input, media) = preceded(
+        pair(
+            alt((
+                tag_no_case("Content-Type"),
+                tag_no_case("c"),
+            )),
+            header_colon,
+        ),
         media_type,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::ContentType(media)))
 }
 
 pub fn content_length(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, length)) = tuple((
-        alt((
-            tag_no_case("Content-Length"),
-            tag_no_case("l"),
-        )),
-        header_colon,
+    let (input, length) = preceded(
+        pair(
+            alt((
+                tag_no_case("Content-Length"),
+                tag_no_case("l"),
+            )),
+            header_colon,
+        ),
         integer,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::ContentLength(length)))
 }
@@ -422,11 +428,13 @@ fn disposition_param_handling_required(input: &[u8]) -> Result<&[u8], Dispositio
 }
 
 fn disposition_param_handling_other(input: &[u8]) -> Result<&[u8], DispositionParam> {
-    let (input, (_, _, value)) = tuple((
-        tag_no_case("handling"),
-        equal,
+    let (input, value) = preceded(
+        pair(
+            tag_no_case("handling"),
+            equal,
+        ),
         token_str,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, DispositionParam::OtherHandling(value)))
 }
@@ -520,11 +528,13 @@ fn language_tag(input: &[u8]) -> Result<&[u8], &str> {
 }
 
 pub fn content_language(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, tags)) = tuple((
-        tag_no_case("Content-Language"),
-        header_colon,
+    let (input, tags) = preceded(
+        pair(
+            tag_no_case("Content-Language"),
+            header_colon,
+        ),
         separated_nonempty_list(comma, language_tag)
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::ContentLanguage(tags)))
 }

@@ -88,11 +88,13 @@ fn via_branch(input: &[u8]) -> Result<&[u8], ViaParam> {
 }
 
 fn via_received(input: &[u8]) -> Result<&[u8], ViaParam> {
-    let (input, (_, _, addr)) = tuple((
-        tag_no_case("received"),
-        equal,
+    let (input, addr) = preceded(
+        pair(
+            tag_no_case("received"),
+            equal,
+        ),
         alt((ipv4_address, ipv6_address)),
-    ))(input)?;
+    )(input)?;
 
     let addr = std::str::from_utf8(addr)
         .map_err(|err| nom::Err::Failure(Error::from(err)))?;
@@ -101,11 +103,13 @@ fn via_received(input: &[u8]) -> Result<&[u8], ViaParam> {
 }
 
 fn via_maddr(input: &[u8]) -> Result<&[u8], ViaParam> {
-    let (input, (_, _, maddr)) = tuple((
-        tag_no_case("maddr"),
-        equal,
+    let (input, maddr) = preceded(
+        pair(
+            tag_no_case("maddr"),
+            equal,
+        ),
         host,
-    ))(input)?;
+    )(input)?;
 
     let maddr = std::str::from_utf8(maddr)
         .map_err(|err| nom::Err::Failure(Error::from(err)))?;
@@ -114,11 +118,13 @@ fn via_maddr(input: &[u8]) -> Result<&[u8], ViaParam> {
 }
 
 fn via_ttl(input: &[u8]) -> Result<&[u8], ViaParam> {
-    let (input, (_, _, ttl)) = tuple((
-        tag_no_case("ttl"),
-        equal,
+    let (input, ttl) = preceded(
+        pair(
+            tag_no_case("ttl"),
+            equal,
+        ),
         integer,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, ViaParam::Ttl(ttl)))
 }
@@ -134,14 +140,11 @@ fn via_params(input: &[u8]) -> Result<&[u8], ViaParam> {
 }
 
 fn via_parm(input: &[u8]) -> Result<&[u8], Via> {
-    let (input, (protocol, _, sent_by, params)) = tuple((
+    let (input, (protocol, sent_by, params)) = tuple((
         sent_protocol,
-        linear_whitespace,
-        sent_by,
-        many0(pair(semicolon, via_params))
+        preceded(linear_whitespace, sent_by),
+        many0(preceded(semicolon, via_params))
     ))(input)?;
-
-    let params = params.into_iter().map(|(_, param)| param).collect();
 
     let protocol = std::str::from_utf8(protocol)
         .map_err(|err| nom::Err::Failure(Error::from(err)))?;

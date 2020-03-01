@@ -10,7 +10,7 @@ use crate::{
 };
 
 use nom::{
-    sequence:: tuple ,
+    sequence::{ preceded, pair, },
     branch::alt,
     bytes::complete::tag_no_case,
 };
@@ -56,11 +56,13 @@ fn priority_value(input: &[u8]) -> Result<&[u8], Priority> {
 }
 
 pub fn priority(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, priority)) = tuple((
-        tag_no_case("Priority"),
-        header_colon,
+    let (input, priority) = preceded(
+        pair(
+            tag_no_case("Priority"),
+            header_colon,
+        ),
         priority_value,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::Priority(priority)))
 }

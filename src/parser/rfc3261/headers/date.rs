@@ -9,7 +9,7 @@ use crate::{
 use nom::{
     combinator::recognize,
     branch::alt,
-    sequence::tuple,
+    sequence::{ tuple, pair, preceded, },
     character::is_digit,
     bytes::complete::{
         tag,
@@ -91,11 +91,13 @@ fn rfc1123_date(input: &[u8]) -> Result<&[u8], &str> {
 }
 
 pub fn date(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, date)) = tuple((
-        tag_no_case("Date"),
-        header_colon,
+    let (input, date) = preceded(
+        pair(
+            tag_no_case("Date"),
+            header_colon,
+        ),
         rfc1123_date,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::Date(date)))
 }
