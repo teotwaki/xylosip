@@ -61,21 +61,25 @@ fn auth_param(input: &[u8]) -> Result<&[u8], (&str, &str)> {
 }
 
 fn request_digest(input: &[u8]) -> Result<&[u8], &[u8]> {
-    let (input, (_, digest, _)) = tuple((
+    let (input, digest) = preceded(
         left_double_quote,
-        take_while_m_n(32, 32, is_lowercase_hexadecimal),
-        right_double_quote,
-    ))(input)?;
+        terminated(
+            take_while_m_n(32, 32, is_lowercase_hexadecimal),
+            right_double_quote,
+        )
+    )(input)?;
 
     Ok((input, digest))
 }
 
 fn dig_resp_response(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
-    let (input, (_, _, digest)) = tuple((
-        tag_no_case("response"),
-        equal,
+    let (input, digest) = preceded(
+        pair(
+            tag_no_case("response"),
+            equal,
+        ),
         request_digest,
-    ))(input)?;
+    )(input)?;
 
     let digest = std::str::from_utf8(digest)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -84,11 +88,13 @@ fn dig_resp_response(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
 }
 
 fn nonce_count(input: &[u8]) -> Result<&[u8], &str> {
-    let (input, (_, _, value)) = tuple((
-        tag_no_case("nc"),
-        equal,
+    let (input, value) = preceded(
+        pair(
+            tag_no_case("nc"),
+            equal,
+        ),
         take_while_m_n(8, 8, is_lowercase_hexadecimal)
-    ))(input)?;
+    )(input)?;
 
     let value = std::str::from_utf8(value)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -97,11 +103,13 @@ fn nonce_count(input: &[u8]) -> Result<&[u8], &str> {
 }
 
 fn cnonce(input: &[u8]) -> Result<&[u8], &str> {
-    let (input, (_, _, cnonce)) = tuple((
-        tag_no_case("cnonce"),
-        equal,
+    let (input, cnonce) = preceded(
+        pair(
+            tag_no_case("cnonce"),
+            equal,
+        ),
         quoted_string,
-    ))(input)?;
+    )(input)?;
 
     let cnonce = std::str::from_utf8(cnonce)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -136,11 +144,13 @@ fn qop_value(input: &[u8]) -> Result<&[u8], QOPValue> {
 }
 
 fn message_qop(input: &[u8]) -> Result<&[u8], QOPValue> {
-    let (input, (_, _, value)) = tuple((
-        tag_no_case("qop"),
-        equal,
+    let (input, value) = preceded(
+        pair(
+            tag_no_case("qop"),
+            equal,
+        ),
         qop_value,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, value))
 }
@@ -155,13 +165,14 @@ fn digest_uri_value(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 fn dig_resp_uri(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
-    let (input, (_, _, _, uri, _)) = tuple((
-        tag_no_case("uri"),
-        equal,
-        left_double_quote,
-        digest_uri_value,
-        right_double_quote,
-    ))(input)?;
+    let (input, uri) = preceded(
+        tuple((
+            tag_no_case("uri"),
+            equal,
+            left_double_quote,
+        )),
+        terminated(digest_uri_value, right_double_quote)
+    )(input)?;
 
     let uri = std::str::from_utf8(uri)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -170,11 +181,13 @@ fn dig_resp_uri(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
 }
 
 fn dig_resp_username(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
-    let (input, (_, _, username)) = tuple((
-        tag_no_case("username"),
-        equal,
+    let (input, username) = preceded(
+        pair(
+            tag_no_case("username"),
+            equal,
+        ),
         quoted_string
-    ))(input)?;
+    )(input)?;
 
     let username = std::str::from_utf8(username)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -247,11 +260,13 @@ fn dig_resp(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
 }
 
 fn realm(input: &[u8]) -> Result<&[u8], &str> {
-    let (input, (_, _, realm)) = tuple((
-        tag_no_case("realm"),
-        equal,
+    let (input, realm) = preceded(
+        pair(
+            tag_no_case("realm"),
+            equal,
+        ),
         quoted_string
-    ))(input)?;
+    )(input)?;
 
     let realm = std::str::from_utf8(realm)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -260,11 +275,13 @@ fn realm(input: &[u8]) -> Result<&[u8], &str> {
 }
 
 fn nonce(input: &[u8]) -> Result<&[u8], &str> {
-    let (input, (_, _, nonce)) = tuple((
-        tag_no_case("nonce"),
-        equal,
+    let (input, nonce) = preceded(
+        pair(
+            tag_no_case("nonce"),
+            equal,
+        ),
         quoted_string
-    ))(input)?;
+    )(input)?;
 
     let nonce = std::str::from_utf8(nonce)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -273,11 +290,13 @@ fn nonce(input: &[u8]) -> Result<&[u8], &str> {
 }
 
 fn opaque(input: &[u8]) -> Result<&[u8], &str> {
-    let (input, (_, _, value)) = tuple((
-        tag_no_case("opaque"),
-        equal,
+    let (input, value) = preceded(
+        pair(
+            tag_no_case("opaque"),
+            equal,
+        ),
         quoted_string
-    ))(input)?;
+    )(input)?;
 
     let value = std::str::from_utf8(value)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -304,15 +323,17 @@ fn algorithm_extension(input: &[u8]) -> Result<&[u8], AlgorithmKind> {
 }
 
 fn algorithm(input: &[u8]) -> Result<&[u8], AlgorithmKind> {
-    let (input, (_, _, kind)) = tuple((
-        tag_no_case("algorithm"),
-        equal,
+    let (input, kind) = preceded(
+        pair(
+            tag_no_case("algorithm"),
+            equal,
+        ),
         alt((
             algorithm_md5_sess,
             algorithm_md5,
             algorithm_extension,
         )),
-    ))(input)?;
+    )(input)?;
 
     Ok((input, kind))
 }

@@ -18,7 +18,7 @@ use crate::{
 
 use nom::{
     sequence::{ pair, tuple, preceded },
-    multi::many0,
+    multi::separated_nonempty_list,
     branch::alt,
     character::is_digit,
     bytes::complete::{
@@ -71,14 +71,13 @@ fn warning_value(input: &[u8]) -> Result<&[u8], Warning> {
 }
 
 pub fn warning(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Warning"),
-        header_colon,
-        warning_value,
-        many0(pair(comma, warning_value))
-    ))(input)?;
-    let mut others: Vec<Warning> = others.into_iter().map(|(_, warning)| warning).collect();
-    others.insert(0, first);
+    let (input, warnings) = preceded(
+        pair(
+            tag_no_case("Warning"),
+            header_colon,
+        ),
+        separated_nonempty_list(comma, warning_value)
+    )(input)?;
 
-    Ok((input, Header::Warning(others)))
+    Ok((input, Header::Warning(warnings)))
 }

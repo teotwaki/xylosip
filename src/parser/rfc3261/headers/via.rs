@@ -31,7 +31,7 @@ use crate::{
 use nom::{
     combinator::{ opt, recognize },
     sequence::{ pair, tuple, preceded },
-    multi::many0,
+    multi::{ many0, separated_nonempty_list, },
     branch::alt,
     bytes::complete::tag_no_case,
 };
@@ -157,14 +157,13 @@ fn via_parm(input: &[u8]) -> Result<&[u8], Via> {
 }
 
 pub fn via(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        alt((tag_no_case("Via"), tag_no_case("v"))),
-        header_colon,
-        via_parm,
-        many0(pair(comma, via_parm))
-    ))(input)?;
-    let mut others: Vec<Via> = others.into_iter().map(|(_, parm)| parm).collect();
-    others.insert(0, first);
+    let (input, vias) = preceded(
+        pair(
+            alt((tag_no_case("Via"), tag_no_case("v"))),
+            header_colon,
+        ),
+        separated_nonempty_list(comma, via_parm)
+    )(input)?;
 
-    Ok((input, Header::Via(others)))
+    Ok((input, Header::Via(vias)))
 }

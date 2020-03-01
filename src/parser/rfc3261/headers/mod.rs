@@ -10,7 +10,6 @@ mod via;
 mod warning;
 
 use crate::{
-    method::Method,
     header::{ Header, RetryParam, RetryAfter, },
     parser::{
         integer,
@@ -41,85 +40,78 @@ use crate::{
 
 use nom::{
     combinator::{ opt, recognize },
-    sequence::{ pair, tuple, preceded, },
+    sequence::{ pair, tuple, preceded, terminated, },
     branch::alt,
-    multi:: many0,
+    multi::{ many0, separated_list, },
     character::complete::{ digit0, digit1 },
     bytes::complete::{ tag, tag_no_case, take_while, },
 };
 
 use crate::parser::Result;
 
-fn allowed_methods(input: &[u8]) -> Result<&[u8], Vec<Method>> {
-    let (input, value) = opt(pair(
-        method,
-        many0(pair(comma, method))
-    ))(input)?;
-
-    let methods = match value {
-        Some((method, methods)) => {
-            let mut methods: Vec<Method> = methods.into_iter().map(|(_, m)| m).collect();
-            methods.insert(0, method);
-            methods
-        },
-        None => vec![],
-    };
-
-    Ok((input, methods))
-}
-
 fn allow(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, methods)) = tuple((
-        tag_no_case("Allow"),
-        header_colon,
-        allowed_methods,
-    ))(input)?;
+    let (input, methods) = preceded(
+        pair(
+            tag_no_case("Allow"),
+            header_colon,
+        ),
+        separated_list(comma, method)
+    )(input)?;
 
     Ok((input, Header::Allow(methods)))
 }
 
 fn cseq(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, cseq, _, method)) = tuple((
-        tag_no_case("CSeq"),
-        header_colon,
-        integer,
-        linear_whitespace,
-        method,
-    ))(input)?;
+    let (input, (cseq, method)) = preceded(
+        pair(
+            tag_no_case("CSeq"),
+            header_colon,
+        ),
+        pair(
+            integer,
+            preceded(linear_whitespace, method)
+        )
+    )(input)?;
 
     Ok((input, Header::CSeq(cseq, method)))
 }
 
 fn expires(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, e)) = tuple((
-        tag_no_case("Expires"),
-        header_colon,
+    let (input, e) = preceded(
+        pair(
+            tag_no_case("Expires"),
+            header_colon,
+        ),
         integer,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::Expires(e)))
 }
 
 fn max_forwards(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, mf)) = tuple((
-        tag_no_case("Max-Forwards"),
-        header_colon,
+    let (input, mf) = preceded(
+        pair(
+            tag_no_case("Max-Forwards"),
+            header_colon,
+        ),
         integer
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::MaxForwards(mf)))
 }
 
 fn mime_version(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, version)) = tuple((
-        tag_no_case("MIME-Version"),
-        header_colon,
+    let (input, version) = preceded(
+        pair(
+            tag_no_case("MIME-Version"),
+            header_colon,
+        ),
         recognize(tuple((
             digit1,
             tag("."),
             digit1,
         )))
-    ))(input)?;
+    )(input)?;
 
     let version = std::str::from_utf8(version)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -128,21 +120,25 @@ fn mime_version(input: &[u8]) -> Result<&[u8], Header> {
 }
 
 fn min_expires(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, me)) = tuple((
-        tag_no_case("Min-Expires"),
-        header_colon,
+    let (input, me) = preceded(
+        pair(
+            tag_no_case("Min-Expires"),
+            header_colon,
+        ),
         integer,
-    ))(input)?;
+    )(input)?;
 
     Ok((input, Header::MinExpires(me)))
 }
 
 fn organization(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, org)) = tuple((
-        tag_no_case("Organization"),
-        header_colon,
+    let (input, org) = preceded(
+        pair(
+            tag_no_case("Organization"),
+            header_colon,
+        ),
         opt(utf8_trim),
-    ))(input)?;
+    )(input)?;
 
     let org = match org {
         Some(org) => Some(std::str::from_utf8(org)
@@ -170,11 +166,13 @@ fn require(input: &[u8]) -> Result<&[u8], Header> {
 }
 
 fn duration_retry_param(input: &[u8]) -> Result<&[u8], RetryParam> {
-    let (input, (_, _, duration)) = tuple((
-        tag_no_case("duration"),
-        equal,
+    let (input, duration) = preceded(
+        pair(
+            tag_no_case("duration"),
+            equal,
+        ),
         integer
-    ))(input)?;
+    )(input)?;
 
     Ok((input, RetryParam::AvailabilityDuration(duration)))
 }
@@ -193,20 +191,23 @@ fn retry_param(input: &[u8]) -> Result<&[u8], RetryParam> {
 }
 
 fn retry_params(input: &[u8]) -> Result<&[u8], Vec<RetryParam>> {
-    let (input, params) = many0(pair(semicolon, retry_param))(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
+    let (input, params) = many0(preceded(semicolon, retry_param))(input)?;
 
     Ok((input, params))
 }
 
 fn retry_after(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, duration, comment, params)) = tuple((
-        tag_no_case("Retry-After"),
-        header_colon,
-        integer,
-        opt(comment),
-        retry_params
-    ))(input)?;
+    let (input, (duration, comment, params)) = preceded(
+        pair(
+            tag_no_case("Retry-After"),
+            header_colon,
+        ),
+        tuple((
+            integer,
+            opt(comment),
+            retry_params
+        ))
+    )(input)?;
 
     let comment = match comment {
         Some(comment) => Some(std::str::from_utf8(comment)
@@ -232,14 +233,16 @@ fn server_val(input: &[u8]) -> Result<&[u8], &[u8]> {
 }
 
 fn server(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, s)) = tuple((
-        tag_no_case("Server"),
-        header_colon,
+    let (input, s) = preceded(
+        pair(
+            tag_no_case("Server"),
+            header_colon,
+        ),
         recognize(pair(
             server_val,
             many0(pair(linear_whitespace, server_val)),
         )),
-    ))(input)?;
+    )(input)?;
 
     let s = std::str::from_utf8(s)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -248,14 +251,16 @@ fn server(input: &[u8]) -> Result<&[u8], Header> {
 }
 
 fn user_agent(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, ua)) = tuple((
-        tag_no_case("User-Agent"),
-        header_colon,
+    let (input, ua) = preceded(
+        pair(
+            tag_no_case("User-Agent"),
+            header_colon,
+        ),
         recognize(pair(
             server_val,
             many0(pair(linear_whitespace, server_val)),
         )),
-    ))(input)?;
+    )(input)?;
 
     let ua = std::str::from_utf8(ua)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -264,11 +269,13 @@ fn user_agent(input: &[u8]) -> Result<&[u8], Header> {
 }
 
 fn subject(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, subject)) = tuple((
-        alt((tag_no_case("Subject"), tag_no_case("s"))),
-        header_colon,
+    let (input, subject) = preceded(
+        pair(
+            alt((tag_no_case("Subject"), tag_no_case("s"))),
+            header_colon,
+        ),
         opt(utf8_trim),
-    ))(input)?;
+    )(input)?;
 
     let subject = match subject {
         Some(subject) => Some(std::str::from_utf8(subject)
@@ -280,12 +287,16 @@ fn subject(input: &[u8]) -> Result<&[u8], Header> {
 }
 
 fn supported(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, mut others)) = tuple((
-        alt((tag_no_case("Supported"), tag_no_case("k"))),
-        header_colon,
-        token_str,
-        option_tag,
-    ))(input)?;
+    let (input, (first, mut others)) = preceded(
+        pair(
+            alt((tag_no_case("Supported"), tag_no_case("k"))),
+            header_colon,
+        ),
+        pair(
+            token_str,
+            option_tag,
+        )
+    )(input)?;
     others.insert(0, first);
 
     Ok((input, Header::Supported(others)))
@@ -312,17 +323,21 @@ fn delay(input: &[u8]) -> Result<&[u8], Option<&str>> {
 }
 
 fn timestamp(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, ts, delay)) = tuple((
-        tag_no_case("Timestamp"),
-        header_colon,
-        recognize(
-            pair(
-                digit1,
-                opt(pair(tag("."), digit0)
-            )
-        )),
-        delay
-    ))(input)?;
+    let (input, (ts, delay)) = preceded(
+        pair(
+            tag_no_case("Timestamp"),
+            header_colon,
+        ),
+        pair(
+            recognize(
+                pair(
+                    digit1,
+                    opt(pair(tag("."), digit0))
+                )
+            ),
+            delay
+        )
+    )(input)?;
 
     let ts = std::str::from_utf8(ts)
         .map_err(|err| nom::Err::Failure(err.into()))?;
@@ -331,12 +346,16 @@ fn timestamp(input: &[u8]) -> Result<&[u8], Header> {
 }
 
 fn unsupported(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, mut others)) = tuple((
-        tag_no_case("Unsupported"),
-        header_colon,
-        token_str,
-        option_tag,
-    ))(input)?;
+    let (input, (first, mut others)) = preceded(
+        pair(
+            tag_no_case("Unsupported"),
+            header_colon,
+        ),
+        pair(
+            token_str,
+            option_tag,
+        )
+    )(input)?;
     others.insert(0, first);
 
     Ok((input, Header::Unsupported(others)))
@@ -358,17 +377,16 @@ fn header_value(input: &[u8]) -> Result<&[u8], &str> {
 }
 
 fn extension_header(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (name, _, value)) = tuple((
+    let (input, (name, value)) = pair(
         token_str,
-        header_colon,
-        header_value,
-    ))(input)?;
+        preceded(header_colon, header_value)
+    )(input)?;
 
     Ok((input, Header::Extension(name, value)))
 }
 
 pub fn message_header(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (header, _)) = pair(
+    let (input, header) = terminated(
         // alt() only supports 21 entries
         alt((
             alt((

@@ -18,8 +18,8 @@ use crate::{
 };
 
 use nom::{
-    sequence::{ pair, tuple },
-    multi::many0,
+    sequence::{ pair, tuple, preceded, },
+    multi::separated_nonempty_list,
     bytes::complete::tag_no_case,
 };
 
@@ -41,14 +41,13 @@ fn error_uri(input: &[u8]) -> Result<&[u8], ErrorInfo> {
 }
 
 pub fn error_info(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, first, others)) = tuple((
-        tag_no_case("Error-Info"),
-        header_colon,
-        error_uri,
-        many0(pair(comma, error_uri))
-    ))(input)?;
-    let mut others: Vec<ErrorInfo> = others.into_iter().map(|(_, info)| info).collect();
-    others.insert(0, first);
+    let (input, errors) = preceded(
+        pair(
+            tag_no_case("Error-Info"),
+            header_colon,
+        ),
+        separated_nonempty_list(comma, error_uri)
+    )(input)?;
 
-    Ok((input, Header::ErrorInfo(others)))
+    Ok((input, Header::ErrorInfo(errors)))
 }

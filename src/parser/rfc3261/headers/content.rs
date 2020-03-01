@@ -38,10 +38,10 @@ use crate::{
 };
 
 use nom::{
-    combinator::{ opt, recognize },
+    combinator::recognize,
     sequence::{ pair, tuple, preceded, },
     branch::alt,
-    multi::{ many0, separated_nonempty_list, },
+    multi::{ many0, separated_nonempty_list, separated_list },
     character::is_alphabetic,
     bytes::complete::{ tag, tag_no_case, take_while_m_n, },
 };
@@ -187,11 +187,13 @@ fn m_parameter(input: &[u8]) -> Result<&[u8], MediaParam> {
 }
 
 fn media_range(input: &[u8]) -> Result<&[u8], Media> {
-    let (input, ((r#type, _, subtype), params)) = pair(
-        tuple((m_type, slash, m_subtype)),
-        many0(pair(semicolon, m_parameter))
+    let (input, ((r#type, subtype), params)) = pair(
+        pair(
+            m_type,
+            preceded(slash, m_subtype)
+        ),
+        many0(preceded(semicolon, m_parameter))
     )(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
 
     Ok((input, Media {
         r#type,
@@ -229,9 +231,8 @@ fn accept_param(input: &[u8]) -> Result<&[u8], AcceptParam> {
 fn accept_range(input: &[u8]) -> Result<&[u8], Accept> {
     let (input, (media, params)) = pair(
         media_range,
-        many0(pair(semicolon, accept_param))
+        many0(preceded(semicolon, accept_param))
     )(input)?;
-    let params: Vec<AcceptParam> = params.into_iter().map(|(_, param)| param).collect();
 
     Ok((input, Accept {
         media,
@@ -240,23 +241,13 @@ fn accept_range(input: &[u8]) -> Result<&[u8], Accept> {
 }
 
 pub fn accept(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, media)) = tuple((
-        tag_no_case("Accept"),
-        header_colon,
-        opt(pair(
-            accept_range,
-            many0(pair(comma, accept_range))
-        ))
-    ))(input)?;
-
-    let medias = match media {
-        Some((first, others)) => {
-            let mut others: Vec<Accept> = others.into_iter().map(|(_, media)| media).collect();
-            others.insert(0, first);
-            others
-        },
-        None => vec![],
-    };
+    let (input, medias) = preceded(
+        pair(
+            tag_no_case("Accept"),
+            header_colon,
+        ),
+        separated_list(comma, accept_range),
+    )(input)?;
 
     Ok((input, Header::Accept(medias)))
 }
@@ -283,9 +274,8 @@ fn codings(input: &[u8]) -> Result<&[u8], ContentCoding> {
 fn encoding(input: &[u8]) -> Result<&[u8], Encoding> {
     let (input, (coding, params)) = pair(
         codings,
-        many0(pair(semicolon, accept_param))
+        many0(preceded(semicolon, accept_param))
     )(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
 
     Ok((input, Encoding {
         coding,
@@ -294,20 +284,13 @@ fn encoding(input: &[u8]) -> Result<&[u8], Encoding> {
 }
 
 pub fn accept_encoding(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, encodings)) = tuple((
-        tag_no_case("Accept-Encoding"),
-        header_colon,
-        opt(pair(encoding, many0(pair(comma, encoding))))
-    ))(input)?;
-
-    let encodings = match encodings {
-        Some((first, others)) => {
-            let mut others: Vec<Encoding> = others.into_iter().map(|(_, encoding)| encoding).collect();
-            others.insert(0, first);
-            others
-        },
-        _ => vec![],
-    };
+    let (input, encodings) = preceded(
+        pair(
+            tag_no_case("Accept-Encoding"),
+            header_colon,
+        ),
+        separated_list(comma, encoding)
+    )(input)?;
 
     Ok((input, Header::AcceptEncoding(encodings)))
 }
@@ -340,9 +323,8 @@ fn language_range(input: &[u8]) -> Result<&[u8], LanguageRange> {
 fn language(input: &[u8]) -> Result<&[u8], Language> {
     let (input, (range, params)) = pair(
         language_range,
-        many0(pair(semicolon, accept_param))
+        many0(preceded(semicolon, accept_param))
     )(input)?;
-    let params = params.into_iter().map(|(_, param)| param).collect();
 
     Ok((input, Language {
         range,
@@ -351,20 +333,13 @@ fn language(input: &[u8]) -> Result<&[u8], Language> {
 }
 
 pub fn accept_language(input: &[u8]) -> Result<&[u8], Header> {
-    let (input, (_, _, languages)) = tuple((
-        tag_no_case("Accept-Language"),
-        header_colon,
-        opt(pair(language, many0(pair(comma, language))))
-    ))(input)?;
-
-    let languages = match languages {
-        Some((first, others)) => {
-            let mut others: Vec<Language> = others.into_iter().map(|(_, language)| language).collect();
-            others.insert(0, first);
-            others
-        },
-        _ => vec![],
-    };
+    let (input, languages) = preceded(
+        pair(
+            tag_no_case("Accept-Language"),
+            header_colon,
+        ),
+        separated_list(comma, language)
+    )(input)?;
 
     Ok((input, Header::AcceptLanguage(languages)))
 }
