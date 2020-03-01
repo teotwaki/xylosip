@@ -13,10 +13,25 @@ use crate::{
 
 pub use common::hostname;
 
-pub fn sip_message(input: &[u8]) -> Result<&[u8], Message> {
+pub use request::request;
+pub use response::response;
+
+pub fn message_request(input: &[u8]) -> Result<&[u8], Message> {
+    let (input, req) = request(input)?;
+
+    Ok((input, Message::Request(req)))
+}
+
+pub fn message_response(input: &[u8]) -> Result<&[u8], Message> {
+    let (input, resp) = response(input)?;
+
+    Ok((input, Message::Response(resp)))
+}
+
+pub fn message(input: &[u8]) -> Result<&[u8], Message> {
     alt((
-        request::request,
-        response::response,
+        message_request,
+        message_response,
     ))(input)
 }
 
@@ -26,7 +41,7 @@ mod tests {
 
     #[test]
     fn sip_message_can_read_a_whole_message() {
-        let message = include_bytes!("../../../assets/invite.sip");
-        assert_eq!(sip_message(message).is_err(), false);
+        let bytes = include_bytes!("../../../assets/invite.sip");
+        assert_eq!(message(bytes).is_err(), false);
     }
 }

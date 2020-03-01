@@ -1,7 +1,5 @@
 mod rfc2806;
-mod rfc3261;
-
-pub use rfc3261::{ sip_message };
+pub mod rfc3261;
 
 use nom::error::ParseError;
 
@@ -20,10 +18,11 @@ pub enum ErrorKind<'a, I> {
     InvalidDomainPart(&'a [u8]),
     InvalidIntegerError,
     InvalidTTLValue,
+    UnknownError,
 }
 
 impl<'a, I> Error<'a, I> {
-    fn new(kind: ErrorKind<'a, I>) -> Self {
+    pub fn new(kind: ErrorKind<'a, I>) -> Self {
         Self {
             kind,
             backtrace: vec![],

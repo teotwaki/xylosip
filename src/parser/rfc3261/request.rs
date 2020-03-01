@@ -1,5 +1,4 @@
 use crate::{
-    message::Message,
     request::{ Request, RequestLine, },
     parser::{
         Error,
@@ -48,18 +47,18 @@ fn request_line(input: &[u8]) -> Result<&[u8], RequestLine> {
     }))
 }
 
-pub fn request(input: &[u8]) -> Result<&[u8], Message> {
+pub fn request(input: &[u8]) -> Result<&[u8], Request> {
     let (input, (request_line, headers, body)) = tuple((
             request_line,
             many0(headers::message_header),
             preceded(tokens::newline, opt(common::message_body)),
         ))(input)?;
 
-    Ok((input, Message::Request(Request {
+    Ok((input, Request {
         request_line,
         headers,
         body,
-    })))
+    }))
 }
 
 #[cfg(test)]

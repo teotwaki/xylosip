@@ -1,6 +1,5 @@
 use crate::{
     response::Response,
-    message::Message,
     parser::{
         Result,
         rfc3261::{
@@ -17,7 +16,7 @@ use nom::{
     combinator::{ opt, recognize },
 };
 
-pub fn response(input: &[u8]) -> Result<&[u8], Message> {
+pub fn response(input: &[u8]) -> Result<&[u8], Response> {
     let (input, response) = recognize(
         tuple((
             status::status_line,
@@ -29,9 +28,9 @@ pub fn response(input: &[u8]) -> Result<&[u8], Message> {
     let response = std::str::from_utf8(response)
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
-    Ok((input, Message::Response(Response {
+    Ok((input, Response {
         content: response,
-    })))
+    }))
 }
 
 mod status {

@@ -2,8 +2,10 @@ mod parser;
 mod message;
 mod request;
 mod response;
-mod header;
+pub mod header;
 mod method;
 
-pub use parser::sip_message;
 pub use message::Message;
+pub use request::Request;
+pub use response::Response;
+pub use method::Method;
