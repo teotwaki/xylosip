@@ -1,5 +1,5 @@
 use crate::{
-    message::{ Header, Priority, },
+    header::{ Header, Priority, },
     parser::{
         Result,
         rfc3261::tokens::{

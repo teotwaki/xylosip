@@ -10,7 +10,8 @@ mod via;
 mod warning;
 
 use crate::{
-    message::{ Header, RetryParam, RetryAfter, Method, },
+    method::Method,
+    header::{ Header, RetryParam, RetryAfter, },
     parser::{
         integer,
         rfc3261::{
@@ -431,7 +432,7 @@ pub fn message_header(input: &[u8]) -> Result<&[u8], Header> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::*;
+    use crate::header::*;
 
     #[test]
     fn message_header_can_parse_via() {

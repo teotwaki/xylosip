@@ -1,5 +1,5 @@
 use crate::{
-    message::{ Header, ErrorInfo, },
+    header::{ Header, ErrorInfo, },
     parser::{
         Result,
         rfc3261::{

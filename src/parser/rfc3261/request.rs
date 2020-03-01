@@ -1,5 +1,6 @@
 use crate::{
-    message::{ Message, Request, RequestLine, },
+    message::Message,
+    request::{ Request, RequestLine, },
     parser::{
         Error,
         Result,
@@ -64,7 +65,8 @@ pub fn request(input: &[u8]) -> Result<&[u8], Message> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::*;
+    use crate::method::Method;
+    use crate::header::Version;
 
     #[test]
     fn request_line_can_parse_full_request_line() {

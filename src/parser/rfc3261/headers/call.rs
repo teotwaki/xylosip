@@ -1,5 +1,10 @@
 use crate::{
-    message::{ Header, InfoParamPurpose, InfoParam, Info, },
+    header::{
+        Header,
+        InfoParamPurpose,
+        InfoParam,
+        Info,
+    },
     parser::{
         Result,
         rfc3261::{

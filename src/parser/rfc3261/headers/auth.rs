@@ -1,5 +1,5 @@
 use crate::{
-    message::{
+    header::{
         Header,
         Challenge,
         DigestParam,

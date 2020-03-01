@@ -1,5 +1,5 @@
 use crate::{
-    message::Header,
+    header::Header,
     parser::{
         Result,
         rfc3261::tokens::header_colon,

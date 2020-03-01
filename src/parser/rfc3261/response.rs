@@ -1,5 +1,6 @@
 use crate::{
-    message::{ Message, Response, },
+    response::Response,
+    message::Message,
     parser::{
         Result,
         rfc3261::{

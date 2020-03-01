@@ -1,5 +1,5 @@
 use crate::{
-    message::{
+    header::{
         Header,
         To,
         ToParam,
@@ -373,7 +373,7 @@ pub fn to(input: &[u8]) -> Result<&[u8], Header> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::*;
+    use crate::header::*;
 
     #[test]
     fn contact_params_expires_extracts_value() {

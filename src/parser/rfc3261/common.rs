@@ -1,6 +1,6 @@
 use crate::{
-    message::{
-        Method,
+    method::Method,
+    header::{
         Version,
         GenericParam,
         URIParam,

@@ -1,5 +1,5 @@
 use crate::{
-    message::{ Header, ViaParam, Via },
+    header::{ Header, ViaParam, Via },
     parser::{
         Error,
         integer,
