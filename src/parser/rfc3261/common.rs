@@ -1,11 +1,13 @@
 use crate::{
-    method::Method,
-    header::{
-        Version,
-        GenericParam,
-        URIParam,
+    sip::{
+        Method,
         Transport,
         User,
+        Version,
+    },
+    header::{
+        GenericParam,
+        URIParam,
         URIHeader,
     },
     parser::{

@@ -32,9 +32,9 @@ pub mod request;
 mod response;
 /// contains header-related code
 pub mod header;
-mod method;
+/// Generic data structures related to SIP
+pub mod sip;
 
 pub use message::Message;
 pub use request::Request;
 pub use response::Response;
-pub use method::Method;

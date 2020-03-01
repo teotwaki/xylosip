@@ -1,4 +1,4 @@
-use crate::method::Method;
+use super::sip::*;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum LanguageRange<'a> {
@@ -75,28 +75,6 @@ pub struct Accept<'a> {
 pub struct AlertInfo<'a> {
     pub uri: &'a str,
     pub params: Vec<GenericParam<'a>>,
-}
-
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum Version {
-    Two,
-    Other(i32, i32),
-}
-
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum Transport<'a> {
-    UDP,
-    TCP,
-    SCTP,
-    TLS,
-    Extension(&'a str),
-}
-
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum User<'a> {
-    Phone,
-    IP,
-    Other(&'a str),
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]

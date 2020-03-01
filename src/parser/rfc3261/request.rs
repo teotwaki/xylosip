@@ -64,8 +64,7 @@ pub fn request(input: &[u8]) -> Result<&[u8], Request> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::method::Method;
-    use crate::header::Version;
+    use crate::sip::*;
 
     #[test]
     fn request_line_can_parse_full_request_line() {

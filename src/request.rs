@@ -1,7 +1,8 @@
-use crate::method::Method;
-use crate::header::{ Header, Version, };
-use crate::parser::rfc3261;
-use crate::parser::{ Error, ErrorKind, };
+use crate::{
+    sip::{ Method, Version, },
+    header::Header,
+    parser::{ rfc3261, Error, ErrorKind },
+};
 
 /// Representation of a SIP Request-Line
 ///

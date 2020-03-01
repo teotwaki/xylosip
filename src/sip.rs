@@ -1,3 +1,24 @@
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum Version {
+    Two,
+    Other(i32, i32),
+}
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum Transport<'a> {
+    UDP,
+    TCP,
+    SCTP,
+    TLS,
+    Extension(&'a str),
+}
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum User<'a> {
+    Phone,
+    IP,
+    Other(&'a str),
+}
 
 /// Representation of a SIP method
 ///
