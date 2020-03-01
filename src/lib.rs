@@ -10,13 +10,15 @@
 //! the `Message::parse` method and you'll get a validated message back.
 //!
 //! ```
+//! # fn handle_sip_message(_: Message) {}
 //! use xylosip::Message;
 //!
+//! // read the data from the network
 //! let bytes = b"INVITE sip:bob@biloxi.example.com SIP/2.0\r\n";
-//! let msg = Message::parse(bytes)?;
 //!
-//! // pass the parsed message to your application
-//! handle_sip_message(msg)?;
+//! Message::parse(bytes)
+//!     // let your application handle the message
+//!     .map(handle_sip_message);
 //! ```
 //!
 //! [1]: https://tools.ietf.org/html/rfc3261
