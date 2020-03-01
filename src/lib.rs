@@ -27,8 +27,10 @@
 
 mod parser;
 mod message;
+/// contains request-related code
 pub mod request;
 mod response;
+/// contains header-related code
 pub mod header;
 mod method;
 
