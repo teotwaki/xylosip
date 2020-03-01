@@ -3,6 +3,7 @@ use crate::response::Response;
 use crate::parser::rfc3261;
 use crate::parser::{ Error, ErrorKind, };
 
+/// Representation of an entire SIP message
 #[derive(PartialEq, Debug, Clone)]
 pub enum Message<'a> {
     Request(Request<'a>),
