@@ -1,5 +1,3 @@
-#![warn(missing_docs)]
-
 //! # Welcome to xylosip, a memory-safe RFC3261 SIP parser
 //!
 //! xylosip is a SIP parser as described in [RFC3261][1]. Some parts of [RFC2806][2] and
