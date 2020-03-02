@@ -32,21 +32,56 @@ pub enum LanguageRange<'a> {
 }
 
 /// Language description, used in the Accept-Language header
+///
+/// The serialized version of this could be for example `en-US;q=0.8`, or simply `en`.
+///
+/// **Note**: This might be refactored into an ordered list by preference.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Language<'a> {
+    /// The language tag for this specific language definition
     pub range: LanguageRange<'a>,
+
+    /// Optional parameters. Usually this will only have a Q param set, indicating the preference
+    /// (or lack thereof) over other languages. A missing Q param indicates a default value of 1.0
+    /// (highest possible value).
     pub params: Vec<AcceptParam<'a>>
 }
 
+/// Representation of a content-coding.
+///
+/// A content-coding is used to indicate how the body of a message has been transformed. For
+/// example, `gzip` indicates that the body has been GNU zipped before being sent over the wire.
+/// For the recipient to make sense of the data, they will first need to apply the correct decoding
+/// in order to obtain the message's actual media type. As per [RFC3261][1]:
+///
+/// > Clients MAY apply content encodings to the body in requests. A server MAY apply content
+/// > encodings to the bodies in responses. The server MUST only use encodings listed in the
+/// > Accept-Encoding header field in the request.
+///
+/// [1]: https://tools.ietf.org/html/rfc3261#section-20.12
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum ContentCoding<'a> {
+    /// This value indicates, when used in the Content-Encoding header, that the client accepts any
+    /// kind of permissible encoding.
     Any,
+
+    /// This variant allows storing of any other (more specific) encoding types
     Other(&'a str),
 }
 
+/// Content-coding description, used in the Accept-Encoding header
+///
+/// The serialized version of this could be for example `gzip;q=0.1`.
+///
+/// **Note**: This might be refactored into an ordered list by preference.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Encoding<'a> {
+    /// The descriptor of an encoding format
     pub coding: ContentCoding<'a>,
+
+    /// Optional parameters. Usually this will only have a Q param set, indicating the preference
+    /// (or lack thereof) over other languages. A missing Q param indicates a default value of 1.0
+    /// (highest possible value).
     pub params: Vec<AcceptParam<'a>>
 }
 
