@@ -32,6 +32,7 @@ fn warning_agent_host_port(input: &[u8]) -> Result<&[u8], WarningAgent> {
     let (input, (host, port)) = host_port(input)?;
 
     let host = std::str::from_utf8(host)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, WarningAgent::HostPort(host, port)))
@@ -40,7 +41,7 @@ fn warning_agent_host_port(input: &[u8]) -> Result<&[u8], WarningAgent> {
 fn warning_agent_pseudonym(input: &[u8]) -> Result<&[u8], WarningAgent> {
     let (input, pseudonym) = token_str(input)?;
 
-    Ok((input, WarningAgent::Pseudonym(pseudonym)))
+    Ok((input, WarningAgent::Pseudonym(pseudonym.to_string())))
 }
 
 fn warning_agent(input: &[u8]) -> Result<&[u8], WarningAgent> {
@@ -59,8 +60,10 @@ fn warning_value(input: &[u8]) -> Result<&[u8], Warning> {
     ))(input)?;
 
     let code = std::str::from_utf8(code)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
     let text = std::str::from_utf8(text)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, Warning {

@@ -114,6 +114,7 @@ fn mime_version(input: &[u8]) -> Result<&[u8], Header> {
     )(input)?;
 
     let version = std::str::from_utf8(version)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, Header::MIMEVersion(version)))
@@ -142,6 +143,7 @@ fn organization(input: &[u8]) -> Result<&[u8], Header> {
 
     let org = match org {
         Some(org) => Some(std::str::from_utf8(org)
+            .map(|s| s.to_string())
             .map_err(|err| nom::Err::Failure(err.into()))?),
         None => None,
     };
@@ -211,6 +213,7 @@ fn retry_after(input: &[u8]) -> Result<&[u8], Header> {
 
     let comment = match comment {
         Some(comment) => Some(std::str::from_utf8(comment)
+            .map(|s| s.to_string())
             .map_err(|err| nom::Err::Failure(err.into()))?),
         None => None,
     };
@@ -245,6 +248,7 @@ fn server(input: &[u8]) -> Result<&[u8], Header> {
     )(input)?;
 
     let s = std::str::from_utf8(s)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, Header::Server(s)))
@@ -263,6 +267,7 @@ fn user_agent(input: &[u8]) -> Result<&[u8], Header> {
     )(input)?;
 
     let ua = std::str::from_utf8(ua)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, Header::UserAgent(ua)))
@@ -279,6 +284,7 @@ fn subject(input: &[u8]) -> Result<&[u8], Header> {
 
     let subject = match subject {
         Some(subject) => Some(std::str::from_utf8(subject)
+            .map(|s| s.to_string())
             .map_err(|err| nom::Err::Failure(err.into()))?),
         None => None,
     };
@@ -302,7 +308,7 @@ fn supported(input: &[u8]) -> Result<&[u8], Header> {
     Ok((input, Header::Supported(others)))
 }
 
-fn delay(input: &[u8]) -> Result<&[u8], Option<&str>> {
+fn delay(input: &[u8]) -> Result<&[u8], Option<String>> {
     let (input, delay) = opt(preceded(
         linear_whitespace,
         recognize(
@@ -315,6 +321,7 @@ fn delay(input: &[u8]) -> Result<&[u8], Option<&str>> {
 
     let delay = match delay {
         Some(delay) => Some(std::str::from_utf8(delay)
+            .map(|s| s.to_string())
             .map_err(|err| nom::Err::Failure(err.into()))?),
         None => None,
     };
@@ -340,6 +347,7 @@ fn timestamp(input: &[u8]) -> Result<&[u8], Header> {
     )(input)?;
 
     let ts = std::str::from_utf8(ts)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, Header::Timestamp(ts, delay)))
@@ -361,7 +369,7 @@ fn unsupported(input: &[u8]) -> Result<&[u8], Header> {
     Ok((input, Header::Unsupported(others)))
 }
 
-fn header_value(input: &[u8]) -> Result<&[u8], &str> {
+fn header_value(input: &[u8]) -> Result<&[u8], String> {
     let (input, value) = recognize(
         many0(alt((
             utf8_char1,
@@ -371,6 +379,7 @@ fn header_value(input: &[u8]) -> Result<&[u8], &str> {
     )(input)?;
 
     let value = std::str::from_utf8(value)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, value))

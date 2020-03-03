@@ -34,7 +34,7 @@ use nom::{
     bytes::complete::{ tag, tag_no_case },
 };
 
-fn callid(input: &[u8]) -> Result<&[u8], &str> {
+fn callid(input: &[u8]) -> Result<&[u8], String> {
     let (input, callid) = recognize(
         pair(
             word,
@@ -43,6 +43,7 @@ fn callid(input: &[u8]) -> Result<&[u8], &str> {
     )(input)?;
 
     let callid = std::str::from_utf8(callid)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, callid))
@@ -84,7 +85,7 @@ fn info_param_purpose_card(input: &[u8]) -> Result<&[u8], InfoParamPurpose> {
 fn info_param_purpose_other(input: &[u8]) -> Result<&[u8], InfoParamPurpose> {
     let (input, value) = token_str(input)?;
 
-    Ok((input, InfoParamPurpose::Other(value)))
+    Ok((input, InfoParamPurpose::Other(value.to_string())))
 }
 
 fn info_param_purpose(input: &[u8]) -> Result<&[u8], InfoParam> {
@@ -124,6 +125,7 @@ fn info(input: &[u8]) -> Result<&[u8], Info> {
     )(input)?;
 
     let uri = std::str::from_utf8(uri)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, Info {

@@ -102,10 +102,11 @@ pub fn token(input: &[u8]) -> Result<&[u8], &[u8]> {
     Ok((input, tokens))
 }
 
-pub fn token_str(input: &[u8]) -> Result<&[u8], &str> {
+pub fn token_str(input: &[u8]) -> Result<&[u8], String> {
     let (input, tokens) = token(input)?;
 
     let tokens = std::str::from_utf8(tokens)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, tokens))

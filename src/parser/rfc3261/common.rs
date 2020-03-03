@@ -36,8 +36,10 @@ use nom::{
     },
 };
 
-pub fn message_body(input: &[u8]) -> Result<&[u8], &[u8]> {
-    rest(input)
+pub fn message_body(input: &[u8]) -> Result<&[u8], Vec<u8>> {
+    let (input, body) = rest(input)?;
+
+    Ok((input, body.to_vec()))
 }
 
 fn user_info(input: &[u8]) -> Result<&[u8], &[u8]> {
@@ -225,7 +227,7 @@ pub fn transport_tls(input: &[u8]) -> Result<&[u8], Transport> {
 pub fn transport_extension(input: &[u8]) -> Result<&[u8], Transport> {
     let (input, value) = tokens::token_str(input)?;
 
-    Ok((input, Transport::Extension(value)))
+    Ok((input, Transport::Extension(value.to_string())))
 }
 
 pub fn transport(input: &[u8]) -> Result<&[u8], Transport> {
@@ -262,7 +264,7 @@ fn user_ip(input: &[u8]) -> Result<&[u8], User> {
 fn user_extension(input: &[u8]) -> Result<&[u8], User> {
     let (input, value) = tokens::token_str(input)?;
 
-    Ok((input, User::Other(value)))
+    Ok((input, User::Other(value.to_string())))
 }
 
 fn user(input: &[u8]) -> Result<&[u8], User> {
@@ -311,6 +313,7 @@ fn uri_parameter_maddr(input: &[u8]) -> Result<&[u8], URIParam> {
     let (input, maddr) = preceded(tag_no_case("maddr="), host)(input)?;
 
     let maddr = std::str::from_utf8(maddr)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, URIParam::MAddr(maddr)))
@@ -334,9 +337,11 @@ fn uri_parameter_other(input: &[u8]) -> Result<&[u8], URIParam> {
     )(input)?;
 
     let name = std::str::from_utf8(name)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
     let value = match value {
         Some(v) => Some(std::str::from_utf8(v)
+            .map(|s| s.to_string())
             .map_err(|err| nom::Err::Failure(err.into()))?),
         None => None,
     };
@@ -373,8 +378,10 @@ fn header(input: &[u8]) -> Result<&[u8], URIHeader> {
     )(input)?;
 
     let name = std::str::from_utf8(name)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
     let value = std::str::from_utf8(value)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, URIHeader {
@@ -429,7 +436,7 @@ fn register(input: &[u8]) -> Result<&[u8], Method> {
 fn extension_method(input: &[u8]) -> Result<&[u8], Method> {
     let (input, method) = tokens::token_str(input)?;
 
-    Ok((input, Method::Extension(method)))
+    Ok((input, Method::Extension(method.to_string())))
 }
 
 pub fn method(input: &[u8]) -> Result<&[u8], Method> {
@@ -568,8 +575,8 @@ pub fn generic_param(input: &[u8]) -> Result<&[u8], GenericParam> {
     )(input)?;
 
     Ok((input, GenericParam {
-        name,
-        value,
+        name: name.to_string(),
+        value: value.and_then(|s| Some(s.to_string())),
     }))
 }
 
@@ -579,7 +586,7 @@ pub fn generic_params(input: &[u8]) -> Result<&[u8], Vec<GenericParam>> {
     Ok((input, params))
 }
 
-pub fn option_tag(input: &[u8]) -> Result<&[u8], Vec<&str>> {
+pub fn option_tag(input: &[u8]) -> Result<&[u8], Vec<String>> {
     let (input, options) = many0(preceded(tokens::comma, tokens::token_str))(input)?;
 
     Ok((input, options))

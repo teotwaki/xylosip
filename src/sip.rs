@@ -4,20 +4,20 @@ pub enum Version {
     Other(i32, i32),
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum Transport<'a> {
+#[derive(PartialEq, Debug, Clone)]
+pub enum Transport {
     UDP,
     TCP,
     SCTP,
     TLS,
-    Extension(&'a str),
+    Extension(String),
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum User<'a> {
+#[derive(PartialEq, Debug, Clone)]
+pub enum User {
     Phone,
     IP,
-    Other(&'a str),
+    Other(String),
 }
 
 /// Representation of a SIP method
@@ -27,8 +27,8 @@ pub enum User<'a> {
 /// (when part of accept headers).
 ///
 /// **Note**: `INFO` is not supported, but can be if there is a use for it. Patches welcome!
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub enum Method<'a> {
+#[derive(PartialEq, Debug, Clone)]
+pub enum Method {
     /// used to setup sessions
     Invite,
 
@@ -48,5 +48,5 @@ pub enum Method<'a> {
     Register,
 
     /// other extension to the SIP protocol
-    Extension(&'a str)
+    Extension(String)
 }

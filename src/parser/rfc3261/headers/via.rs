@@ -84,7 +84,7 @@ fn via_branch(input: &[u8]) -> Result<&[u8], ViaParam> {
         token_str,
     )(input)?;
 
-    Ok((input, ViaParam::Branch(branch)))
+    Ok((input, ViaParam::Branch(branch.to_string())))
 }
 
 fn via_received(input: &[u8]) -> Result<&[u8], ViaParam> {
@@ -97,6 +97,7 @@ fn via_received(input: &[u8]) -> Result<&[u8], ViaParam> {
     )(input)?;
 
     let addr = std::str::from_utf8(addr)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(Error::from(err)))?;
 
     Ok((input, ViaParam::Received(addr)))
@@ -112,6 +113,7 @@ fn via_maddr(input: &[u8]) -> Result<&[u8], ViaParam> {
     )(input)?;
 
     let maddr = std::str::from_utf8(maddr)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(Error::from(err)))?;
 
     Ok((input, ViaParam::MAddr(maddr)))
@@ -147,9 +149,11 @@ fn via_parm(input: &[u8]) -> Result<&[u8], Via> {
     ))(input)?;
 
     let protocol = std::str::from_utf8(protocol)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(Error::from(err)))?;
 
     let sent_by = std::str::from_utf8(sent_by)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(Error::from(err)))?;
 
     Ok((input, Via {

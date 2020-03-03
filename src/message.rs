@@ -6,14 +6,14 @@ use crate::parser::{ Error, ErrorKind, };
 /// Representation of a SIP message (either a Request or a Response)
 ///
 #[derive(PartialEq, Debug, Clone)]
-pub enum Message<'a> {
+pub enum Message {
     /// variant when a SIP request is parsed
-    Request(Request<'a>),
+    Request(Request),
     /// variant when a SIP response is parsed
-    Response(Response<'a>),
+    Response(Response),
 }
 
-impl<'a> Message<'a> {
+impl<'a> Message {
     /// Attempts to parse a byte-slice representation of a SIP message
     ///
     /// This method should be the primary way to parse data coming from the network, as it is

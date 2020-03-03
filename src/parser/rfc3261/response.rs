@@ -25,11 +25,8 @@ pub fn response(input: &[u8]) -> Result<&[u8], Response> {
         ))
     )(input)?;
 
-    let response = std::str::from_utf8(response)
-        .map_err(|err| nom::Err::Failure(err.into()))?;
-
     Ok((input, Response {
-        content: response,
+        content: response.to_vec(),
     }))
 }
 

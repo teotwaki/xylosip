@@ -33,7 +33,7 @@ fn alert_param(input: &[u8]) -> Result<&[u8], AlertInfo> {
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, AlertInfo {
-        uri,
+        uri: uri.to_string(),
         params,
     }))
 }

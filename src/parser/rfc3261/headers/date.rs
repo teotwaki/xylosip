@@ -99,5 +99,5 @@ pub fn date(input: &[u8]) -> Result<&[u8], Header> {
         rfc1123_date,
     )(input)?;
 
-    Ok((input, Header::Date(date)))
+    Ok((input, Header::Date(date.to_string())))
 }

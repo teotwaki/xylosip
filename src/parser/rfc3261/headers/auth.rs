@@ -48,13 +48,14 @@ use nom::{
     },
 };
 
-fn auth_param(input: &[u8]) -> Result<&[u8], (&str, &str)> {
+fn auth_param(input: &[u8]) -> Result<&[u8], (String, String)> {
     let (input, (name, value)) = pair(
         token_str,
         preceded(equal, alt((token, quoted_string)))
     )(input)?;
 
     let value = std::str::from_utf8(value)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, (name, value)))
@@ -82,12 +83,13 @@ fn dig_resp_response(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
     )(input)?;
 
     let digest = std::str::from_utf8(digest)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, DigestResponseParam::Response(digest)))
 }
 
-fn nonce_count(input: &[u8]) -> Result<&[u8], &str> {
+fn nonce_count(input: &[u8]) -> Result<&[u8], String> {
     let (input, value) = preceded(
         pair(
             tag_no_case("nc"),
@@ -97,12 +99,13 @@ fn nonce_count(input: &[u8]) -> Result<&[u8], &str> {
     )(input)?;
 
     let value = std::str::from_utf8(value)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, value))
 }
 
-fn cnonce(input: &[u8]) -> Result<&[u8], &str> {
+fn cnonce(input: &[u8]) -> Result<&[u8], String> {
     let (input, cnonce) = preceded(
         pair(
             tag_no_case("cnonce"),
@@ -112,6 +115,7 @@ fn cnonce(input: &[u8]) -> Result<&[u8], &str> {
     )(input)?;
 
     let cnonce = std::str::from_utf8(cnonce)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, cnonce))
@@ -175,6 +179,7 @@ fn dig_resp_uri(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
     )(input)?;
 
     let uri = std::str::from_utf8(uri)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, DigestResponseParam::URI(uri)))
@@ -190,6 +195,7 @@ fn dig_resp_username(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
     )(input)?;
 
     let username = std::str::from_utf8(username)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, DigestResponseParam::Username(username)))
@@ -259,7 +265,7 @@ fn dig_resp(input: &[u8]) -> Result<&[u8], DigestResponseParam> {
     ))(input)
 }
 
-fn realm(input: &[u8]) -> Result<&[u8], &str> {
+fn realm(input: &[u8]) -> Result<&[u8], String> {
     let (input, realm) = preceded(
         pair(
             tag_no_case("realm"),
@@ -269,12 +275,13 @@ fn realm(input: &[u8]) -> Result<&[u8], &str> {
     )(input)?;
 
     let realm = std::str::from_utf8(realm)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, realm))
 }
 
-fn nonce(input: &[u8]) -> Result<&[u8], &str> {
+fn nonce(input: &[u8]) -> Result<&[u8], String> {
     let (input, nonce) = preceded(
         pair(
             tag_no_case("nonce"),
@@ -284,12 +291,13 @@ fn nonce(input: &[u8]) -> Result<&[u8], &str> {
     )(input)?;
 
     let nonce = std::str::from_utf8(nonce)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, nonce))
 }
 
-fn opaque(input: &[u8]) -> Result<&[u8], &str> {
+fn opaque(input: &[u8]) -> Result<&[u8], String> {
     let (input, value) = preceded(
         pair(
             tag_no_case("opaque"),
@@ -299,6 +307,7 @@ fn opaque(input: &[u8]) -> Result<&[u8], &str> {
     )(input)?;
 
     let value = std::str::from_utf8(value)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, value))
@@ -394,6 +403,7 @@ fn ainfo_response_auth(input: &[u8]) -> Result<&[u8], AuthenticationInfo> {
     )(input)?;
 
     let auth = std::str::from_utf8(auth)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, AuthenticationInfo::ResponseAuth(auth)))
@@ -409,6 +419,7 @@ fn ainfo_nextnonce(input: &[u8]) -> Result<&[u8], AuthenticationInfo> {
     )(input)?;
 
     let nextnonce = std::str::from_utf8(nextnonce)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, AuthenticationInfo::NextNonce(nextnonce)))
@@ -503,7 +514,7 @@ fn stale(input: &[u8]) -> Result<&[u8], bool> {
     Ok((input, value))
 }
 
-fn domain(input: &[u8]) -> Result<&[u8], Vec<&str>> {
+fn domain(input: &[u8]) -> Result<&[u8], Vec<String>> {
     let (input, domains) = preceded(
         tuple((
             tag_no_case("domain"),
@@ -520,8 +531,9 @@ fn domain(input: &[u8]) -> Result<&[u8], Vec<&str>> {
 
     let domains = domains.iter().map(|d|
         std::str::from_utf8(d)
+            .map(|s| s.to_string())
             .map_err(|err| nom::Err::Failure(err.into()))
-    ).collect::<std::result::Result<Vec<&str>, _>>()?;
+    ).collect::<std::result::Result<Vec<String>, _>>()?;
 
     Ok((input, domains))
 }

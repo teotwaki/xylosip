@@ -42,7 +42,7 @@ fn request_line(input: &[u8]) -> Result<&[u8], RequestLine> {
 
     Ok((input, RequestLine {
         method,
-        uri,
+        uri: uri.to_string(),
         version,
     }))
 }

@@ -20,12 +20,12 @@ use crate::{
 ///    |- method                         |- Protocol version
 /// ```
 #[derive(PartialEq, Debug, Clone)]
-pub struct RequestLine<'a> {
+pub struct RequestLine {
     /// the parsed Method
-    pub method: Method<'a>,
+    pub method: Method,
 
     /// the URI describing the user or service being addressed
-    pub uri: &'a str,
+    pub uri: String,
 
     /// the version of the SIP protocol this request adheres to. There is virtually only one version
     /// in use: 2.0.
@@ -66,18 +66,18 @@ pub struct RequestLine<'a> {
 /// a=rtpmap:0 PCMU/8000                                                 |
 /// ```
 #[derive(PartialEq, Debug, Clone)]
-pub struct Request<'a> {
+pub struct Request {
     /// the parsed Request-Line
-    pub request_line: RequestLine<'a>,
+    pub request_line: RequestLine,
 
     /// mandatory and optional headers extracted from the request
-    pub headers: Vec<Header<'a>>,
+    pub headers: Vec<Header>,
 
     /// the optional body of the request. This is completely unparsed and unvalidated.
-    pub body: Option<&'a [u8]>,
+    pub body: Option<Vec<u8>>,
 }
 
-impl<'a> Request<'a> {
+impl<'a> Request {
     /// Attempts to parse a byte-slice representation of a SIP request
     ///
     /// **Note**: The error type of this method will probably change in the future.

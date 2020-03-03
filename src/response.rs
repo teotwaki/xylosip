@@ -4,13 +4,13 @@ use crate::parser::{ Error, ErrorKind, };
 /// Representation of a SIP Response
 ///
 /// **Note**: Responses are currently not well-supported. Patches welcome!
-#[derive(PartialEq, Debug, Copy, Clone)]
-pub struct Response<'a> {
+#[derive(PartialEq, Debug, Clone)]
+pub struct Response {
     /// unparsed content of the Response
-    pub content: &'a str,
+    pub content: Vec<u8>,
 }
 
-impl<'a> Response<'a> {
+impl<'a> Response {
     /// Attempts to parse a byte-slice representation of a SIP response
     ///
     /// **Note**: Responses are currently not parsed in detail.

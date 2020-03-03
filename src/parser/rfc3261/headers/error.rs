@@ -33,6 +33,7 @@ fn error_uri(input: &[u8]) -> Result<&[u8], ErrorInfo> {
     ))(input)?;
 
     let uri = std::str::from_utf8(uri)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, ErrorInfo {

@@ -97,7 +97,7 @@ fn m_type_message(input: &[u8]) -> Result<&[u8], MediaType> {
 fn m_type_ietf_extension(input: &[u8]) -> Result<&[u8], MediaType> {
     let (input, value) = token_str(input)?;
 
-    Ok((input, MediaType::IETFExtension(value)))
+    Ok((input, MediaType::IETFExtension(value.to_string())))
 }
 
 fn m_type_x_extension(input: &[u8]) -> Result<&[u8], MediaType> {
@@ -111,7 +111,7 @@ fn m_type_x_extension(input: &[u8]) -> Result<&[u8], MediaType> {
     let value = std::str::from_utf8(value)
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
-    Ok((input, MediaType::XExtension(value)))
+    Ok((input, MediaType::XExtension(value.to_string())))
 }
 
 fn m_type(input: &[u8]) -> Result<&[u8], MediaType> {
@@ -138,14 +138,14 @@ fn m_subtype_any(input: &[u8]) -> Result<&[u8], MediaSubType> {
 fn m_subtype_ietf_extension(input: &[u8]) -> Result<&[u8], MediaSubType> {
     let (input, value) = token_str(input)?;
 
-    Ok((input, MediaSubType::IETFExtension(value)))
+    Ok((input, MediaSubType::IETFExtension(value.to_string())))
 }
 
 fn m_subtype_iana_extension(input: &[u8]) -> Result<&[u8], MediaSubType> {
     // TODO: This is unreachable?
     let (input, value) = token_str(input)?;
 
-    Ok((input, MediaSubType::IANAExtension(value)))
+    Ok((input, MediaSubType::IANAExtension(value.to_string())))
 }
 
 fn m_subtype_x_extension(input: &[u8]) -> Result<&[u8], MediaSubType> {
@@ -159,7 +159,7 @@ fn m_subtype_x_extension(input: &[u8]) -> Result<&[u8], MediaSubType> {
     let value = std::str::from_utf8(value)
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
-    Ok((input, MediaSubType::XExtension(value)))
+    Ok((input, MediaSubType::XExtension(value.to_string())))
 }
 
 fn m_subtype(input: &[u8]) -> Result<&[u8], MediaSubType> {
@@ -181,8 +181,8 @@ fn m_parameter(input: &[u8]) -> Result<&[u8], MediaParam> {
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, MediaParam {
-        name,
-        value,
+        name: name.to_string(),
+        value: value.to_string(),
     }))
 }
 
@@ -214,7 +214,7 @@ fn accept_param_q(input: &[u8]) -> Result<&[u8], AcceptParam> {
     let q = std::str::from_utf8(q)
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
-    Ok((input, AcceptParam::Q(q)))
+    Ok((input, AcceptParam::Q(q.to_string())))
 }
 
 fn accept_param_extension(input: &[u8]) -> Result<&[u8], AcceptParam> {
@@ -263,7 +263,7 @@ fn codings_any(input: &[u8]) -> Result<&[u8], ContentCoding> {
 fn codings_other(input: &[u8]) -> Result<&[u8], ContentCoding> {
     let (input, value) = token_str(input)?;
 
-    Ok((input, ContentCoding::Other(value)))
+    Ok((input, ContentCoding::Other(value.to_string())))
 }
 
 fn codings(input: &[u8]) -> Result<&[u8], ContentCoding> {
@@ -312,7 +312,7 @@ fn language_range_other(input: &[u8]) -> Result<&[u8], LanguageRange> {
     let value = std::str::from_utf8(value)
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
-    Ok((input, LanguageRange::Other(value)))
+    Ok((input, LanguageRange::Other(value.to_string())))
 }
 
 fn language_range(input: &[u8]) -> Result<&[u8], LanguageRange> {
@@ -513,7 +513,7 @@ pub fn content_disposition(input: &[u8]) -> Result<&[u8], Header> {
     })))
 }
 
-fn language_tag(input: &[u8]) -> Result<&[u8], &str> {
+fn language_tag(input: &[u8]) -> Result<&[u8], String> {
     let (input, tag) = recognize(
         pair(
             take_while_m_n(1, 8, is_alphabetic),
@@ -522,6 +522,7 @@ fn language_tag(input: &[u8]) -> Result<&[u8], &str> {
     )(input)?;
 
     let tag = std::str::from_utf8(tag)
+        .map(|s| s.to_string())
         .map_err(|err| nom::Err::Failure(err.into()))?;
 
     Ok((input, tag))
