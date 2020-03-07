@@ -1,6 +1,6 @@
 use crate::{
     sip::{ Method, Version, },
-    header::Header,
+    header::{ self, Header, },
     parser::{ rfc3261, Error, ErrorKind },
 };
 
@@ -70,11 +70,92 @@ pub struct Request {
     /// the parsed Request-Line
     pub request_line: RequestLine,
 
+    /// the call ID of the request
+    pub call_id: String,
+
+    /// the command sequence of the request
+    pub cseq: (i32, Method),
+
+    /// the remote user making the request
+    pub from: header::From,
+
+    /// the max forwards (ttl) of the request
+    pub max_forwards: i32,
+
+    /// local user the request is for
+    pub to: header::To,
+
+    /// the upstream UAs this request has passed through
+    pub via: Vec<header::Via>,
+
     /// mandatory and optional headers extracted from the request
     pub headers: Vec<Header>,
 
     /// the optional body of the request. This is completely unparsed and unvalidated.
     pub body: Option<Vec<u8>>,
+}
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum InvalidRequestError {
+    MissingCallIDHeader,
+    MissingCSeqHeader,
+    MissingFromHeader,
+    MissingMaxForwardsHeader,
+    MissingToHeader,
+    MissingViaHeader,
+}
+
+impl Request {
+    pub fn new(request_line: RequestLine, headers: Vec<Header>, body: Option<Vec<u8>>) -> Result<Self, InvalidRequestError> {
+        let mut call_id = None;
+        let mut cseq = None;
+        let mut from = None;
+        let mut max_forwards = None;
+        let mut to = None;
+        let mut via = None;
+
+        for header in headers.iter() {
+            match header {
+                Header::CallID(id) => call_id = Some(id.clone()),
+                Header::CSeq(c, m) => cseq = Some((*c, m.clone())),
+                Header::From(f) => from = Some(f.clone()),
+                Header::MaxForwards(mf) => max_forwards = Some(*mf),
+                Header::To(t) => to = Some(t.clone()),
+                Header::Via(v) => via = Some(v.clone()),
+                _ => {},
+            };
+        }
+
+        if call_id.is_none() {
+            Err(InvalidRequestError::MissingCallIDHeader)
+        } else if cseq.is_none() {
+            Err(InvalidRequestError::MissingCSeqHeader)
+        } else if from.is_none() {
+            Err(InvalidRequestError::MissingFromHeader)
+        } else if max_forwards.is_none() {
+            Err(InvalidRequestError::MissingMaxForwardsHeader)
+        } else if to.is_none() {
+            Err(InvalidRequestError::MissingToHeader)
+        } else if via.is_none() {
+            Err(InvalidRequestError::MissingViaHeader)
+        } else {
+            Ok(Self {
+                request_line,
+                call_id: call_id.unwrap(),
+                cseq: cseq.unwrap(),
+                from: from.unwrap(),
+                max_forwards: max_forwards.unwrap(),
+                to: to.unwrap(),
+                via: via.unwrap(),
+                headers: headers,
+                body,
+            })
+        }
+    }
+
+    pub fn method(&self) -> &Method {
+        &self.request_line.method
+    }
 }
 
 impl<'a> Request {
@@ -97,6 +178,7 @@ mod tests {
     #[test]
     fn request_parse_can_read_whole_message() {
         let bytes = include_bytes!("../assets/invite.sip");
-        assert_eq!(Request::parse(bytes).is_err(), false);
+        let req = Request::parse(bytes);
+        assert_eq!(req.is_err(), false);
     }
 }

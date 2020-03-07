@@ -2,6 +2,7 @@ mod rfc2806;
 pub mod rfc3261;
 
 use nom::error::ParseError;
+use super::request::InvalidRequestError;
 
 #[derive(PartialEq, Debug)]
 pub struct Error<'a, I> {
@@ -18,6 +19,7 @@ pub enum ErrorKind<'a, I> {
     InvalidDomainPart(&'a [u8]),
     InvalidIntegerError,
     InvalidTTLValue,
+    InvalidRequest(InvalidRequestError),
     UnknownError,
 }
 
@@ -50,6 +52,12 @@ impl<'a, I> From<std::num::ParseIntError> for Error<'a, I> {
 impl<'a, I> From<std::str::Utf8Error> for Error<'a, I> {
     fn from(error: std::str::Utf8Error) -> Self {
         Self::new(ErrorKind::Utf8Error(error))
+    }
+}
+
+impl<'a, I> From<InvalidRequestError> for Error<'a, I> {
+    fn from(error: InvalidRequestError) -> Self {
+        Self::new(ErrorKind::InvalidRequest(error))
     }
 }
 

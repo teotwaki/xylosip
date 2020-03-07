@@ -54,11 +54,9 @@ pub fn request(input: &[u8]) -> Result<&[u8], Request> {
             preceded(tokens::newline, opt(common::message_body)),
         ))(input)?;
 
-    Ok((input, Request {
-        request_line,
-        headers,
-        body,
-    }))
+    Request::new(request_line, headers, body)
+        .map(|request| (input, request))
+        .map_err(|err| nom::Err::Failure(err.into()))
 }
 
 #[cfg(test)]
