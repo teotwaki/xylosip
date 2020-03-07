@@ -4,6 +4,74 @@ use crate::{
     parser::{ rfc3261, Error, ErrorKind },
 };
 
+#[derive(PartialEq, Debug, Clone)]
+pub struct Invite {
+    /// the parsed Request-Line
+    pub request_line: RequestLine,
+
+    /// the call ID of the INVITE
+    pub call_id: String,
+
+    /// the command sequence of the INVITE
+    pub cseq: (i32, Method),
+
+    /// the remote user sending the INVITE
+    pub from: header::From,
+
+    /// the max forwards (ttl) of the INVITE
+    pub max_forwards: i32,
+
+    /// local user the INVITE is for
+    pub to: header::To,
+
+    /// the upstream UAs this request has passed through
+    pub via: Vec<header::Via>,
+
+    /// mandatory and optional headers extracted from the INVITE
+    pub headers: Vec<Header>,
+
+    /// the optional body of the INVITE. This is completely unparsed and unvalidated.
+    pub body: Option<Vec<u8>>,
+}
+
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum InvalidInviteError {
+    MissingContactHeader,
+}
+
+impl Invite {
+    pub fn method(&self) -> &Method {
+        &self.request_line.method
+    }
+
+    pub fn from_request(r: Request) -> Result<Self, InvalidInviteError> {
+        let mut contact = None;
+
+        for header in r.headers.iter() {
+            match header {
+                Header::Contact(c) => contact = Some(c),
+                _ => {},
+            };
+        }
+
+        if contact.is_none() {
+            Err(InvalidInviteError::MissingContactHeader)
+        } else {
+            Ok(Self {
+                request_line: r.request_line,
+                call_id: r.call_id,
+                cseq: r.cseq,
+                from: r.from,
+                max_forwards: r.max_forwards,
+                to: r.to,
+                via: r.via,
+                headers: r.headers,
+                body: r.body,
+            })
+        }
+    }
+}
+
 /// Representation of a SIP Request-Line
 ///
 /// A SIP Request-Line is composed of a Method, a Request-URI and a protocol version descriptor.
