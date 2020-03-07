@@ -23,7 +23,8 @@ impl<'a> Message {
         match rfc3261::message(input) {
             Ok((_, msg)) => Ok(msg),
             Err(nom::Err::Failure(err)) => Err(err),
-            Err(_) => Err(Error::new(ErrorKind::UnknownError)),
+            Err(nom::Err::Error(err)) => Err(err),
+            Err(_err) => Err(Error::new(ErrorKind::UnknownError)),
         }
     }
 }
