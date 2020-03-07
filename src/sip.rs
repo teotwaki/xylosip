@@ -1,3 +1,5 @@
+use slog;
+
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Version {
     Two,
@@ -49,4 +51,20 @@ pub enum Method {
 
     /// other extension to the SIP protocol
     Extension(String)
+}
+
+impl slog::Value for Method {
+    fn serialize(&self, _rec: &slog::Record, key: slog::Key, serializer: &mut dyn slog::Serializer) -> slog::Result {
+        let method = match self {
+            Self::Invite => "INVITE",
+            Self::Ack => "Ack",
+            Self::Options => "OPTIONS",
+            Self::Bye => "BYE",
+            Self::Cancel => "CANCEL",
+            Self::Register => "REGISTER",
+            Self::Extension(s) => &s,
+        };
+
+        serializer.emit_str(key, method)
+    }
 }
