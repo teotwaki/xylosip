@@ -34,8 +34,9 @@ pub struct Invite {
     pub body: Option<Vec<u8>>,
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone, thiserror::Error)]
 pub enum InvalidInviteError {
+    #[error("mandatory header missing: Contact")]
     MissingContactHeader,
 }
 
@@ -163,13 +164,19 @@ pub struct Request {
     pub body: Option<Vec<u8>>,
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone, thiserror::Error)]
 pub enum InvalidRequestError {
+    #[error("mandatory header missing: Call-ID")]
     MissingCallIDHeader,
+    #[error("mandatory header missing: CSeq")]
     MissingCSeqHeader,
+    #[error("mandatory header missing: From")]
     MissingFromHeader,
+    #[error("mandatory header missing: Max-Forwards")]
     MissingMaxForwardsHeader,
+    #[error("mandatory header missing: To")]
     MissingToHeader,
+    #[error("mandatory header missing: Via")]
     MissingViaHeader,
 }
 
