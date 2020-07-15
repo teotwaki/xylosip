@@ -11,7 +11,7 @@ homepage = "https://github.com/teotwaki/xylosip"
 
 [dependencies]
 nom = { version = "5", default-features = false, features = ["std"] }
-atoi = { version = "0.3.2", default-features = false }
+atoi = { version = "0.3", default-features = false }
 slog = "2.5"
 thiserror = "1.0"
 
